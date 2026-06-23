@@ -47,7 +47,7 @@ export function AgentCard({
 }: AgentCardProps) {
   const meta = AGENT_META[type];
   const Icon = meta.icon;
-  const reducedMotion = useReducedMotion();
+  const { reduced: reducedMotion } = useReducedMotion();
 
   const cardContent = (
     <div className="flex items-start gap-2">

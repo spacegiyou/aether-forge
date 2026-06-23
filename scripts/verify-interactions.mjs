@@ -36,6 +36,17 @@ async function main() {
 
   await page.goto(URL, { waitUntil: "networkidle" });
 
+  // ── Error alert path (A5): oversized goal triggers server validation error ──
+  const goalInput = page.locator('[data-testid="goal-input"]');
+  const oversizedGoal = "x".repeat(2001);
+  await goalInput.fill(oversizedGoal);
+  await page.locator('[data-testid="execute-btn"]').click();
+  const errorAlert = page.locator('[data-testid="execute-error"]');
+  await errorAlert.waitFor({ timeout: 10000 });
+  const errorText = await errorAlert.innerText();
+  logCanvas(`Error alert (role=alert): ${errorText}`);
+  if (!errorText.includes("2000")) throw new Error(`Expected max-length error, got: ${errorText}`);
+
   // ── Canvas: default swarm ──
   const flowCanvas = page.locator('[data-testid="flow-canvas"]');
   await flowCanvas.waitFor();
@@ -60,8 +71,7 @@ async function main() {
     if (afterDragNodes <= initialNodes) throw new Error("Drag-drop did not add a node");
   }
 
-  // ── Canvas: Execute flow ──
-  const goalInput = page.locator('[data-testid="goal-input"]');
+  // ── Canvas: Execute success flow ──
   await goalInput.fill("Verify agent swarm collaboration end-to-end");
   await page.locator('[data-testid="execute-btn"]').click();
 

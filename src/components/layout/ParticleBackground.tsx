@@ -33,26 +33,22 @@ function Particles({
 }
 
 export function ParticleBackground() {
-  // Lazy init — positions generated once, outside render path (A1)
   const [positions] = useState(() => generateParticlePositions(1200));
-  const reducedMotion = useReducedMotion();
+  const { reduced, mounted } = useReducedMotion();
 
-  if (reducedMotion) {
-    return (
-      <div
-        className="pointer-events-none fixed inset-0 -z-10 opacity-30 dark:opacity-40 cosmic-bg"
-        data-testid="particle-canvas"
-        aria-hidden="true"
-      />
-    );
-  }
-
+  // Single stable wrapper on server + client; Canvas mounts client-only (no hydration mismatch)
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 opacity-40 dark:opacity-60" data-testid="particle-canvas">
-      <Canvas camera={{ position: [0, 0, 8], fov: 60 }} gl={{ alpha: true }}>
-        <ambientLight intensity={0.2} />
-        <Particles positions={positions} animate={!reducedMotion} />
-      </Canvas>
+    <div
+      className="pointer-events-none fixed inset-0 -z-10 opacity-40 dark:opacity-60"
+      data-testid="particle-canvas"
+      aria-hidden="true"
+    >
+      {mounted && !reduced && (
+        <Canvas camera={{ position: [0, 0, 8], fov: 60 }} gl={{ alpha: true }}>
+          <ambientLight intensity={0.2} />
+          <Particles positions={positions} animate />
+        </Canvas>
+      )}
     </div>
   );
 }

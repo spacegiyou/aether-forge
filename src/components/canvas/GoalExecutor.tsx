@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { FlowCanvas } from "./FlowCanvas";
 import { OutputPanel } from "./OutputPanel";
 import { executeGoalAction } from "@/actions/execute-goal";
+import { extractExecuteError } from "@/lib/execute/goal-validation";
 import { saveSession } from "@/lib/storage/supabase-mock";
 import type { ExecutionStep, ExecutionOutput, AgentType } from "@/lib/generators/goal-processor";
 import { sleep } from "@/lib/utils";
@@ -38,8 +39,9 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
 
     try {
     const result = await executeGoalAction(goal);
-    if ("error" in result && result.error) {
-      setError(result.error);
+    const actionError = extractExecuteError(result);
+    if (actionError) {
+      setError(actionError);
       setExecuting(false);
       return;
     }
