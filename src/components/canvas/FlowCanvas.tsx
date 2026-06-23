@@ -34,13 +34,25 @@ interface FlowCanvasProps {
   activeAgent?: AgentType | null;
   /** Agent being dragged from sidebar — dims others */
   draggingAgent?: AgentType | null;
+  /** Keyboard "Add to canvas" request from sidebar */
+  addAgentRequest?: { type: AgentType; key: number } | null;
 }
 
-function FlowCanvasInner({ executing, activeAgent, draggingAgent }: FlowCanvasProps) {
+function FlowCanvasInner({ executing, activeAgent, draggingAgent, addAgentRequest }: FlowCanvasProps) {
   const { screenToFlowPosition } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState(createDefaultSwarmNodes());
   const [edges, setEdges, onEdgesChange] = useEdgesState(createDefaultSwarmEdges());
   const [dropCount, setDropCount] = useState(0);
+
+  // Keyboard accessibility: add agent to canvas center (A6)
+  useEffect(() => {
+    if (!addAgentRequest) return;
+    setNodes((nds) => {
+      const position = offsetDropPosition({ x: 200, y: 180 }, nds);
+      const id = `${addAgentRequest.type}-kb-${addAgentRequest.key}`;
+      return [...nds, createAgentNode(addAgentRequest.type, id, position)];
+    });
+  }, [addAgentRequest, setNodes]);
 
   // Tie execution steps to canvas: highlight active agent + pulse its edges
   useEffect(() => {

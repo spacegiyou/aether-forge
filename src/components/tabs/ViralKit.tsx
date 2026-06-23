@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { generateXThread } from "@/lib/generators/thread-generator";
 import { generateLorem } from "@/lib/generators/lorem-generator";
-import { Share2, Image, Copy, Check } from "lucide-react";
+import { Share2, Image as ImageIcon, Copy, Check } from "lucide-react";
 
 export function ViralKit() {
   const [topic, setTopic] = useState("");
@@ -82,13 +82,13 @@ export function ViralKit() {
             Image Pack
           </span>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4" data-testid="image-pack">
-            {images.map((img, i) => (
+            {images.map((img) => (
               <motion.div
                 key={img}
                 whileHover={{ scale: 1.05 }}
                 className="aspect-square rounded-xl border border-white/10 bg-gradient-to-br from-cyan-600/30 via-violet-600/20 to-transparent flex flex-col items-center justify-center p-2"
               >
-                <Image className="h-6 w-6 text-white/40 mb-1" />
+                <ImageIcon className="h-6 w-6 text-white/40 mb-1" aria-hidden="true" />
                 <p className="text-[9px] text-center text-muted-foreground">{img}</p>
                 <p className="text-[8px] text-white/30 mt-1">{generateLorem(img, 6)}</p>
               </motion.div>

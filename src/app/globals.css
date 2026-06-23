@@ -64,6 +64,14 @@ body {
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* A6: respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .executing-pulse,
+  .animate-pulse {
+    animation: none !important;
+  }
+}
+
 /* React Flow dark overrides */
 .react-flow__controls button {
   background: rgba(255, 255, 255, 0.06) !important;

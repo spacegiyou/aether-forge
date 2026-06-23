@@ -2,7 +2,7 @@
 
 > **A stunning, production-ready agentic AI studio built with Next.js 16, React Flow, Three.js, and Grok Build.**
 
-![Demo GIF Placeholder](./public/demo.gif)
+> **Demo GIF:** `public/demo.gif` is a **placeholder** — record a screen capture and replace it before sharing on X.
 
 ## ✨ What is AetherForge?
 
@@ -14,13 +14,13 @@ Built as proof of **Grok Build** power for sharing on X.
 
 | Feature | Description |
 |---------|-------------|
-| **Agent Sidebar** | 4 draggable agents — Researcher (X sim), Designer (Imagine), Coder, Analyst |
+| **Agent Sidebar** | 4 draggable agents — Researcher (X sim **Demo**), Designer (Imagine **Demo**), Coder, Analyst |
 | **React Flow Canvas** | Connect agents, collaborate visually |
 | **Goal Execution** | "Set your goal" → animated step logs + 4 output types |
 | **Live Swarm Viz** | Real-time telemetry charts (Recharts) |
-| **Multimodal Lab** | Prompt → fake video player + audio narration |
-| **One-Click Deploy** | Vercel button + README generator |
-| **Viral Kit** | Auto X thread + image pack |
+| **Multimodal Lab** | **Demo** — prompt → simulated video player + audio narration |
+| **One-Click Deploy** | **Demo** — Vercel button + README generator |
+| **Viral Kit** | **Demo** — auto X thread + image pack |
 | **PWA** | Installable, offline shell |
 | **Themes** | Dark cosmic glassmorphism (default) + light mode |
 
@@ -65,9 +65,9 @@ npx vercel --prod
 npm test
 ```
 
-## 📸 Demo GIF
+## 📸 Demo GIF (placeholder)
 
-Replace `public/demo.gif` with a screen recording of:
+`public/demo.gif` is currently a placeholder asset. Replace it with a screen recording of:
 1. Dragging agents onto the canvas
 2. Executing a goal
 3. Browsing all four tabs

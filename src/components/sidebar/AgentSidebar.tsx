@@ -11,9 +11,10 @@ const AGENTS: AgentType[] = ["researcher", "designer", "coder", "analyst"];
 interface AgentSidebarProps {
   onDragStart: (type: AgentType) => void;
   onDragEnd?: () => void;
+  onAddToCanvas?: (type: AgentType) => void;
 }
 
-export function AgentSidebar({ onDragStart, onDragEnd }: AgentSidebarProps) {
+export function AgentSidebar({ onDragStart, onDragEnd, onAddToCanvas }: AgentSidebarProps) {
   const [xSimActive, setXSimActive] = useState(false);
   const [xFeed, setXFeed] = useState<string[]>([]);
   const [imagineMsg, setImagineMsg] = useState("");
@@ -48,6 +49,7 @@ export function AgentSidebar({ onDragStart, onDragEnd }: AgentSidebarProps) {
               type={type}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
+              onAddToCanvas={onAddToCanvas}
               xSimActive={type === "researcher" ? xSimActive : undefined}
               onXSim={() => setXSimActive((v) => !v)}
               onImagine={() => setImagineMsg(`🎬 Imagine: ${generateLorem("video", 10)}`)}
@@ -57,7 +59,7 @@ export function AgentSidebar({ onDragStart, onDragEnd }: AgentSidebarProps) {
 
         {xSimActive && xFeed.length > 0 && (
           <div className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-2" data-testid="x-feed">
-            <p className="mb-1 text-[10px] font-semibold text-cyan-400">X Live Feed</p>
+            <p className="mb-1 text-[10px] font-semibold text-cyan-400">X Live Feed (Demo)</p>
             {xFeed.map((item, i) => (
               <p key={i} className="text-[10px] text-muted-foreground leading-relaxed border-t border-white/5 pt-1 mt-1">
                 @{["grok", "xai", "aether"][i % 3]} · {item}
@@ -68,7 +70,7 @@ export function AgentSidebar({ onDragStart, onDragEnd }: AgentSidebarProps) {
 
         {imagineMsg && (
           <p className="mt-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[10px] text-violet-300" data-testid="imagine-msg">
-            {imagineMsg}
+            <span className="font-semibold text-violet-400">Demo:</span> {imagineMsg}
           </p>
         )}
       </ScrollArea>

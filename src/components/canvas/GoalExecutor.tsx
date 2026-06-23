@@ -18,13 +18,15 @@ interface GoalExecutorProps {
   goal: string;
   onGoalChange: (goal: string) => void;
   draggingAgent?: AgentType | null;
+  addAgentRequest?: { type: AgentType; key: number } | null;
 }
 
-export function GoalExecutor({ goal, onGoalChange, draggingAgent }: GoalExecutorProps) {
+export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentRequest }: GoalExecutorProps) {
   const [executing, setExecuting] = useState(false);
   const [steps, setSteps] = useState<ExecutionStep[]>([]);
   const [output, setOutput] = useState<ExecutionOutput | null>(null);
   const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleExecute = async () => {
     if (!goal.trim() || executing) return;
@@ -32,9 +34,12 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent }: GoalExecutor
     setSteps([]);
     setOutput(null);
     setActiveAgent(null);
+    setError(null);
 
+    try {
     const result = await executeGoalAction(goal);
     if ("error" in result && result.error) {
+      setError(result.error);
       setExecuting(false);
       return;
     }
@@ -70,6 +75,10 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent }: GoalExecutor
       outputs: { summary: out.summary },
     });
     setExecuting(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Execution failed unexpectedly.");
+      setExecuting(false);
+    }
   };
 
   return (
@@ -82,6 +91,15 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent }: GoalExecutor
         <label htmlFor="goal-input" className="mb-2 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Set your goal
         </label>
+        {error && (
+          <div
+            role="alert"
+            className="mb-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+            data-testid="execute-error"
+          >
+            {error}
+          </div>
+        )}
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             id="goal-input"
@@ -96,6 +114,7 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent }: GoalExecutor
             onClick={handleExecute}
             disabled={executing || !goal.trim()}
             data-testid="execute-btn"
+            aria-label="Execute goal with agent swarm"
             className="shrink-0"
           >
             {executing ? (
@@ -110,7 +129,12 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent }: GoalExecutor
 
       {/* Canvas */}
       <div className="min-h-[240px] flex-1">
-        <FlowCanvas executing={executing} activeAgent={activeAgent} draggingAgent={draggingAgent} />
+        <FlowCanvas
+          executing={executing}
+          activeAgent={activeAgent}
+          draggingAgent={draggingAgent}
+          addAgentRequest={addAgentRequest}
+        />
       </div>
 
       {/* Step logs */}
