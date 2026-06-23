@@ -30,7 +30,7 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
   const [error, setError] = useState<string | null>(null);
 
   const handleExecute = async () => {
-    if (!goal.trim() || executing) return;
+    if (executing) return;
     setExecuting(true);
     setSteps([]);
     setOutput(null);
@@ -114,7 +114,7 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
           <Button
             size="lg"
             onClick={handleExecute}
-            disabled={executing || !goal.trim()}
+            disabled={executing}
             data-testid="execute-btn"
             aria-label="Execute goal with agent swarm"
             className="shrink-0"

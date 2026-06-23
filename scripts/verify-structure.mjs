@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 /**
  * Static + fetched DOM verification for AetherForge.
- * Run against a live dev server: node scripts/verify-structure.mjs [url]
+ * SSR html checks stable shells; Playwright confirms client-hydrated Three.js canvas.
+ *
+ * Run against a live dev server: SCRATCH=/path node scripts/verify-structure.mjs [url]
  */
 import { readFileSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { chromium } from "playwright";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -46,11 +49,30 @@ async function main() {
     ["tab-swarm", /data-testid="tab-swarm"/],
     ["export-repo", /data-testid="export-repo-btn"/],
     ["react-flow", /react-flow/],
-    ["three-canvas", /<canvas/],
+    // particle-canvas wrapper is SSR-stable; <canvas> mounts client-only after hydration
+    ["particle-canvas-ssr", /data-testid="particle-canvas"/],
   ];
 
   for (const [name, re] of required) {
     check(`DOM: ${name}`, re.test(html));
+  }
+
+  // Three.js integration — source proof (Canvas is client-only, not in fetch html)
+  const particleSrc = readFileSync(join(ROOT, "src/components/layout/ParticleBackground.tsx"), "utf8");
+  check("source: @react-three/fiber Canvas", particleSrc.includes("@react-three/fiber") && particleSrc.includes("Canvas"));
+  check("source: generateParticlePositions", particleSrc.includes("generateParticlePositions"));
+
+  // Client-hydrated Three.js <canvas> via Playwright (post-mount)
+  try {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto(URL, { waitUntil: "networkidle" });
+    await page.locator('[data-testid="particle-canvas"]').waitFor({ timeout: 10000 });
+    const canvasCount = await page.locator('[data-testid="particle-canvas"] canvas').count();
+    check("client: three-canvas element", canvasCount >= 1, `found=${canvasCount}`);
+    await browser.close();
+  } catch (e) {
+    check("client: three-canvas element", false, String(e));
   }
 
   // Source file checks

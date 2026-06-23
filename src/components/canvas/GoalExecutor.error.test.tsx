@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { GoalExecutor } from "./GoalExecutor";
 
@@ -36,6 +36,25 @@ import { executeGoalAction } from "@/actions/execute-goal";
 describe("GoalExecutor error UI", () => {
   beforeEach(() => {
     vi.mocked(executeGoalAction).mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders role=alert for empty goal server error", async () => {
+    vi.mocked(executeGoalAction).mockResolvedValue({
+      error: "Please set a goal before executing.",
+    });
+
+    const onGoalChange = vi.fn();
+    render(<GoalExecutor goal="   " onGoalChange={onGoalChange} />);
+
+    fireEvent.click(screen.getByTestId("execute-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("goal");
+    });
   });
 
   it("renders role=alert when server action returns error", async () => {

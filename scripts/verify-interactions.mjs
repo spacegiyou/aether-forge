@@ -36,8 +36,16 @@ async function main() {
 
   await page.goto(URL, { waitUntil: "networkidle" });
 
-  // ── Error alert path (A5): oversized goal triggers server validation error ──
+  // ── Error alert path (A5): empty goal triggers server validation error ──
   const goalInput = page.locator('[data-testid="goal-input"]');
+  await goalInput.fill("   ");
+  await page.locator('[data-testid="execute-btn"]').click();
+  await page.locator('[data-testid="execute-error"]').waitFor({ timeout: 10000 });
+  const emptyError = await page.locator('[data-testid="execute-error"]').innerText();
+  logCanvas(`Empty goal error alert: ${emptyError}`);
+  if (!emptyError.toLowerCase().includes("goal")) throw new Error(`Expected empty-goal error, got: ${emptyError}`);
+
+  // ── Error alert path (A5): oversized goal triggers server validation error ──
   const oversizedGoal = "x".repeat(2001);
   await goalInput.fill(oversizedGoal);
   await page.locator('[data-testid="execute-btn"]').click();
