@@ -1,68 +1,64 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Connection,
   type Node,
-  type Edge,
   BackgroundVariant,
   MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { AgentType } from "@/lib/generators/goal-processor";
-
-const AGENT_POSITIONS: Record<AgentType, { x: number; y: number }> = {
-  researcher: { x: 80, y: 80 },
-  designer: { x: 320, y: 80 },
-  coder: { x: 80, y: 280 },
-  analyst: { x: 320, y: 280 },
-};
-
-const AGENT_COLORS: Record<AgentType, string> = {
-  researcher: "#22d3ee",
-  designer: "#a78bfa",
-  coder: "#34d399",
-  analyst: "#fbbf24",
-};
-
-function createAgentNode(type: AgentType, id: string): Node {
-  return {
-    id,
-    type: "default",
-    position: AGENT_POSITIONS[type],
-    data: { label: type.charAt(0).toUpperCase() + type.slice(1) },
-    style: {
-      background: "rgba(255,255,255,0.06)",
-      border: `1px solid ${AGENT_COLORS[type]}55`,
-      borderRadius: 12,
-      padding: 12,
-      color: AGENT_COLORS[type],
-      fontSize: 13,
-      fontWeight: 600,
-      backdropFilter: "blur(12px)",
-      minWidth: 120,
-    },
-  };
-}
-
-const initialNodes: Node[] = [];
-const initialEdges: Edge[] = [];
+import {
+  createAgentNode,
+  createDefaultSwarmNodes,
+  createDefaultSwarmEdges,
+  highlightActiveAgent,
+  offsetDropPosition,
+  pulseEdgesForAgent,
+  AGENT_COLORS,
+} from "@/lib/flow/swarm-layout";
 
 interface FlowCanvasProps {
   executing?: boolean;
+  /** Agent highlighted during current execution step */
+  activeAgent?: AgentType | null;
+  /** Agent being dragged from sidebar — dims others */
+  draggingAgent?: AgentType | null;
 }
 
-export function FlowCanvas({ executing }: FlowCanvasProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [nodeCount, setNodeCount] = useState(0);
+function FlowCanvasInner({ executing, activeAgent, draggingAgent }: FlowCanvasProps) {
+  const { screenToFlowPosition } = useReactFlow();
+  const [nodes, setNodes, onNodesChange] = useNodesState(createDefaultSwarmNodes());
+  const [edges, setEdges, onEdgesChange] = useEdgesState(createDefaultSwarmEdges());
+  const [dropCount, setDropCount] = useState(0);
+
+  // Tie execution steps to canvas: highlight active agent + pulse its edges
+  useEffect(() => {
+    setNodes((nds) => {
+      let updated = highlightActiveAgent(nds, activeAgent ?? null);
+      if (draggingAgent) {
+        updated = updated.map((n) => {
+          const type = n.data?.agentType as AgentType;
+          return createAgentNode(type, n.id, n.position, {
+            active: type === activeAgent,
+            dragging: type === draggingAgent,
+          });
+        });
+      }
+      return updated;
+    });
+    setEdges((eds) => pulseEdgesForAgent(eds, activeAgent ?? null));
+  }, [activeAgent, draggingAgent, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) =>
@@ -84,13 +80,21 @@ export function FlowCanvas({ executing }: FlowCanvasProps) {
     (event: React.DragEvent) => {
       event.preventDefault();
       const type = event.dataTransfer.getData("agent-type") as AgentType;
-      if (!type || !AGENT_POSITIONS[type]) return;
+      if (!type) return;
 
-      const id = `${type}-${nodeCount}`;
-      setNodeCount((c) => c + 1);
-      setNodes((nds) => [...nds, createAgentNode(type, id)]);
+      const rawPosition = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      setNodes((nds) => {
+        const position = offsetDropPosition(rawPosition, nds);
+        const id = `${type}-drop-${dropCount}`;
+        return [...nds, createAgentNode(type, id, position)];
+      });
+      setDropCount((c) => c + 1);
     },
-    [nodeCount, setNodes]
+    [dropCount, screenToFlowPosition, setNodes]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -98,13 +102,33 @@ export function FlowCanvas({ executing }: FlowCanvasProps) {
     event.dataTransfer.dropEffect = "move";
   }, []);
 
+  const nodeColor = useCallback((n: Node) => {
+    const type = (n.data?.agentType ?? n.data?.label) as string;
+    return AGENT_COLORS[type?.toLowerCase() as AgentType] ?? "#22d3ee";
+  }, []);
+
+  const swarmStats = useMemo(
+    () => ({ nodes: nodes.length, edges: edges.length }),
+    [nodes.length, edges.length]
+  );
+
   return (
     <div
-      className="h-full w-full rounded-xl overflow-hidden border border-white/10"
+      className="relative h-full w-full rounded-xl overflow-hidden border border-white/10"
       onDrop={onDrop}
       onDragOver={onDragOver}
       data-testid="flow-canvas"
+      data-node-count={swarmStats.nodes}
+      data-edge-count={swarmStats.edges}
     >
+      {draggingAgent && (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-2 z-10 mx-auto w-fit rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] text-cyan-300"
+          data-testid="drag-hint"
+        >
+          Drop {draggingAgent} onto the canvas
+        </div>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -118,11 +142,19 @@ export function FlowCanvas({ executing }: FlowCanvasProps) {
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#ffffff15" />
         <Controls className="!bg-white/5 !border-white/10 !rounded-lg" />
         <MiniMap
-          nodeColor={(n) => AGENT_COLORS[(n.data?.label as string)?.toLowerCase() as AgentType] ?? "#22d3ee"}
+          nodeColor={nodeColor}
           maskColor="rgba(0,0,0,0.6)"
           className="!bg-white/5 !border-white/10 !rounded-lg"
         />
       </ReactFlow>
     </div>
+  );
+}
+
+export function FlowCanvas(props: FlowCanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <FlowCanvasInner {...props} />
+    </ReactFlowProvider>
   );
 }

@@ -27,12 +27,13 @@ const AGENT_META: Record<
 interface AgentCardProps {
   type: AgentType;
   onDragStart: (type: AgentType) => void;
+  onDragEnd?: () => void;
   onXSim?: () => void;
   onImagine?: () => void;
   xSimActive?: boolean;
 }
 
-export function AgentCard({ type, onDragStart, onXSim, onImagine, xSimActive }: AgentCardProps) {
+export function AgentCard({ type, onDragStart, onDragEnd, onXSim, onImagine, xSimActive }: AgentCardProps) {
   const meta = AGENT_META[type];
   const Icon = meta.icon;
 
@@ -44,6 +45,7 @@ export function AgentCard({ type, onDragStart, onXSim, onImagine, xSimActive }: 
         e.dataTransfer.effectAllowed = "move";
         onDragStart(type);
       }}
+      onDragEnd={() => onDragEnd?.()}
       data-testid={`agent-card-${type}`}
     >
     <motion.div

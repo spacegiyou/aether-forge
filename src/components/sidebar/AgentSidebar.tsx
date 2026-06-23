@@ -10,9 +10,10 @@ const AGENTS: AgentType[] = ["researcher", "designer", "coder", "analyst"];
 
 interface AgentSidebarProps {
   onDragStart: (type: AgentType) => void;
+  onDragEnd?: () => void;
 }
 
-export function AgentSidebar({ onDragStart }: AgentSidebarProps) {
+export function AgentSidebar({ onDragStart, onDragEnd }: AgentSidebarProps) {
   const [xSimActive, setXSimActive] = useState(false);
   const [xFeed, setXFeed] = useState<string[]>([]);
   const [imagineMsg, setImagineMsg] = useState("");
@@ -46,6 +47,7 @@ export function AgentSidebar({ onDragStart }: AgentSidebarProps) {
               key={type}
               type={type}
               onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
               xSimActive={type === "researcher" ? xSimActive : undefined}
               onXSim={() => setXSimActive((v) => !v)}
               onImagine={() => setImagineMsg(`🎬 Imagine: ${generateLorem("video", 10)}`)}

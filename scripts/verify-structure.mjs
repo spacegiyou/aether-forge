@@ -86,9 +86,9 @@ async function main() {
     ...checks.map((c) => `- [${c.ok ? "x" : " "}] ${c.name}${c.detail ? ` (${c.detail})` : ""}`),
   ].join("\n");
 
-  writeFileSync(join(SCRATCH, "canvas-evidence.txt"), report);
-  writeFileSync(join(SCRATCH, "tab-outputs.txt"), report);
-  console.log(`\nReport written to ${SCRATCH}`);
+  writeFileSync(join(SCRATCH, "structure-check.txt"), report);
+  console.log(`\nStructure report written to ${SCRATCH}/structure-check.txt`);
+  console.log("Run scripts/verify-interactions.mjs for live canvas + tab evidence.");
   process.exit(allOk ? 0 : 1);
 }
 

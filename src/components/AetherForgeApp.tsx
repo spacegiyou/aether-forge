@@ -10,7 +10,7 @@ import type { AgentType } from "@/lib/generators/goal-processor";
 
 export function AetherForgeApp() {
   const [goal, setGoal] = useState("Build a stunning agentic AI studio for 2026");
-  const [, setDragging] = useState<AgentType | null>(null);
+  const [draggingAgent, setDraggingAgent] = useState<AgentType | null>(null);
 
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -20,13 +20,16 @@ export function AetherForgeApp() {
       <div className="flex flex-1 flex-col lg:flex-row">
         {/* Sidebar */}
         <div className="shrink-0 lg:w-72">
-          <AgentSidebar onDragStart={setDragging} />
+          <AgentSidebar
+            onDragStart={setDraggingAgent}
+            onDragEnd={() => setDraggingAgent(null)}
+          />
         </div>
 
         {/* Main canvas area */}
         <main className="flex flex-1 flex-col min-h-0">
           <div className="flex-1 min-h-[400px]">
-            <GoalExecutor goal={goal} onGoalChange={setGoal} />
+            <GoalExecutor goal={goal} onGoalChange={setGoal} draggingAgent={draggingAgent} />
           </div>
         </main>
 

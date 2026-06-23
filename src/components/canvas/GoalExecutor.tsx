@@ -11,24 +11,27 @@ import { FlowCanvas } from "./FlowCanvas";
 import { OutputPanel } from "./OutputPanel";
 import { executeGoalAction } from "@/actions/execute-goal";
 import { saveSession } from "@/lib/storage/supabase-mock";
-import type { ExecutionStep, ExecutionOutput } from "@/lib/generators/goal-processor";
+import type { ExecutionStep, ExecutionOutput, AgentType } from "@/lib/generators/goal-processor";
 import { sleep } from "@/lib/utils";
 
 interface GoalExecutorProps {
   goal: string;
   onGoalChange: (goal: string) => void;
+  draggingAgent?: AgentType | null;
 }
 
-export function GoalExecutor({ goal, onGoalChange }: GoalExecutorProps) {
+export function GoalExecutor({ goal, onGoalChange, draggingAgent }: GoalExecutorProps) {
   const [executing, setExecuting] = useState(false);
   const [steps, setSteps] = useState<ExecutionStep[]>([]);
   const [output, setOutput] = useState<ExecutionOutput | null>(null);
+  const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
 
   const handleExecute = async () => {
     if (!goal.trim() || executing) return;
     setExecuting(true);
     setSteps([]);
     setOutput(null);
+    setActiveAgent(null);
 
     const result = await executeGoalAction(goal);
     if ("error" in result && result.error) {
@@ -44,9 +47,11 @@ export function GoalExecutor({ goal, onGoalChange }: GoalExecutorProps) {
 
     // Animate steps sequentially
     for (let i = 0; i < planned.length; i++) {
+      const step = planned[i];
+      setActiveAgent(step.agent);
       setSteps((prev) => [
         ...prev.map((s) => ({ ...s, status: "complete" as const })),
-        { ...planned[i], status: "running" },
+        { ...step, status: "running" },
       ]);
       await sleep(600);
       setSteps((prev) =>
@@ -56,6 +61,7 @@ export function GoalExecutor({ goal, onGoalChange }: GoalExecutorProps) {
       );
     }
 
+    setActiveAgent(null);
     setOutput(out);
     saveSession({
       id: `session-${Date.now()}`,
@@ -104,7 +110,7 @@ export function GoalExecutor({ goal, onGoalChange }: GoalExecutorProps) {
 
       {/* Canvas */}
       <div className="min-h-[240px] flex-1">
-        <FlowCanvas executing={executing} />
+        <FlowCanvas executing={executing} activeAgent={activeAgent} draggingAgent={draggingAgent} />
       </div>
 
       {/* Step logs */}
@@ -121,7 +127,7 @@ export function GoalExecutor({ goal, onGoalChange }: GoalExecutorProps) {
             </p>
             <ScrollArea className="h-28">
               {steps.map((step) => (
-                <div key={step.id} className="flex items-center gap-2 py-1 text-[11px]">
+                <div key={step.id} data-testid="execution-step" className="flex items-center gap-2 py-1 text-[11px]">
                   <Badge
                     variant={
                       step.agent === "researcher" ? "default" :
