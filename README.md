@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AetherForge — 2026 Agentic AI Studio
 
-## Getting Started
+> **A stunning, production-ready agentic AI studio built with Next.js 16, React Flow, Three.js, and Grok Build.**
 
-First, run the development server:
+![Demo GIF Placeholder](./public/demo.gif)
+
+## ✨ What is AetherForge?
+
+AetherForge is an interactive demonstration of the future of agentic AI tooling. Drag four specialized agents onto a collaboration canvas, set a goal, and watch the swarm execute — generating code, visuals, X threads, and analytics in real time.
+
+Built as proof of **Grok Build** power for sharing on X.
+
+## 🎯 Core Features
+
+| Feature | Description |
+|---------|-------------|
+| **Agent Sidebar** | 4 draggable agents — Researcher (X sim), Designer (Imagine), Coder, Analyst |
+| **React Flow Canvas** | Connect agents, collaborate visually |
+| **Goal Execution** | "Set your goal" → animated step logs + 4 output types |
+| **Live Swarm Viz** | Real-time telemetry charts (Recharts) |
+| **Multimodal Lab** | Prompt → fake video player + audio narration |
+| **One-Click Deploy** | Vercel button + README generator |
+| **Viral Kit** | Auto X thread + image pack |
+| **PWA** | Installable, offline shell |
+| **Themes** | Dark cosmic glassmorphism (default) + light mode |
+
+## 🚀 Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠 Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Next.js 16** — App Router + Server Actions
+- **TypeScript** — Strict typing throughout
+- **Tailwind CSS v4** — Cosmic glassmorphism theme
+- **shadcn/ui** — Accessible component primitives
+- **Framer Motion** — Execution animations
+- **React Flow** — Agent collaboration canvas
+- **Recharts** — Live swarm metrics
+- **Three.js** — Cosmic particle background
+- **Supabase Mock** — localStorage session persistence
 
-## Learn More
+## 📦 Deploy
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+chmod +x scripts/deploy-vercel.sh
+./scripts/deploy-vercel.sh
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Or deploy manually:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run build
+npx vercel --prod
+```
 
-## Deploy on Vercel
+## 🧪 Tests
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm test
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📸 Demo GIF
+
+Replace `public/demo.gif` with a screen recording of:
+1. Dragging agents onto the canvas
+2. Executing a goal
+3. Browsing all four tabs
+
+## 📁 Project Structure
+
+```
+src/
+├── actions/          # Server Actions (goal execution)
+├── components/
+│   ├── canvas/       # React Flow + goal executor
+│   ├── layout/       # Header, particles, theme
+│   ├── sidebar/      # Draggable agent cards
+│   ├── tabs/         # 4 feature tabs
+│   └── ui/           # shadcn primitives
+└── lib/
+    ├── generators/   # Pure mock output functions
+    ├── storage/      # Supabase mock (localStorage)
+    └── export/       # Repo zip exporter
+```
+
+## 🌌 Theme
+
+Dark cosmic xAI-inspired glassmorphism with cyan/violet accents. Toggle light mode via the header sun/moon button.
+
+---
+
+*Forged with Grok Build — share on X and tag @Grok*
