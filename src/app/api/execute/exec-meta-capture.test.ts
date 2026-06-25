@@ -1,3 +1,8 @@
+/**
+ * Captures NDJSON meta transcripts for verification evidence (exec-modes.log).
+ * Run: npx vitest run src/app/api/execute/exec-meta-capture.test.ts --reporter=verbose
+ */
+
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
@@ -15,7 +20,7 @@ vi.mock("@/lib/ai/grok-client", () => ({
   getModelForSource: (s: string) => (s === "oauth" ? "grok-4.3" : "grok-code-fast-1"),
 }));
 
-const VALID_EXECUTION = JSON.stringify({
+const VALID = JSON.stringify({
   steps: [{ agent: "coder", message: "ok" }],
   code: { language: "ts", filename: "f.ts", content: "export {}" },
   imagePrompt: "img",
@@ -24,47 +29,46 @@ const VALID_EXECUTION = JSON.stringify({
   summary: "s",
 });
 
-async function firstMetaFromExecute(goal = "build a test dashboard"): Promise<{
-  aiMode: string;
-  source: string;
-}> {
+async function captureMetaNdjson(label: string): Promise<string> {
   const res = await POST(
     new Request("http://localhost/api/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ goal }),
+      body: JSON.stringify({ goal: `capture ${label}` }),
     })
   );
   expect(res.ok).toBe(true);
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("no body");
+  const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-    const line = buffer.split("\n").find((l) => l.trim());
-    if (line) {
-      const event = JSON.parse(line) as { type: string; aiMode?: string; source?: string };
+    for (const line of buffer.split("\n")) {
+      if (!line.trim()) continue;
+      const event = JSON.parse(line) as { type: string; source?: string; aiMode?: string };
       if (event.type === "meta") {
+        const ndjson = JSON.stringify(event);
+        console.log(`CAPTURE_NDJSON_META [${label}]: ${ndjson}`);
+        console.log(`ASSERT_SOURCE [${label}]: ${event.source}`);
         await reader.cancel();
-        return { aiMode: event.aiMode!, source: event.source! };
+        return ndjson;
       }
     }
   }
-  throw new Error("no meta event in stream");
+  throw new Error(`no meta for ${label}`);
 }
 
-describe("POST /api/execute meta source", () => {
+describe("POST /api/execute NDJSON meta capture", () => {
   const original = { ...process.env };
   let tmpDir: string;
   let tokenFile: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "aetherforge-api-exec-"));
+    tmpDir = mkdtempSync(join(tmpdir(), "aetherforge-capture-"));
     tokenFile = join(tmpDir, "xai-auth.json");
-    vi.mocked(createGrokJsonCompletion).mockResolvedValue(VALID_EXECUTION);
+    vi.mocked(createGrokJsonCompletion).mockResolvedValue(VALID);
     resetAiEnvCache();
   });
 
@@ -73,35 +77,37 @@ describe("POST /api/execute meta source", () => {
     resetAiEnvCache();
   });
 
-  it("returns meta source mock with no creds", async () => {
+  it("captures mock NDJSON meta", async () => {
     process.env.AI_MODE = "auto";
     delete process.env.XAI_API_KEY;
     delete process.env.XAI_AUTH_FILE;
     resetAiEnvCache();
 
-    const meta = await firstMetaFromExecute();
-    expect(meta).toEqual({ aiMode: "mock", source: "mock" });
+    const line = await captureMetaNdjson("mock");
+    expect(line).toContain('"source":"mock"');
+    expect(line).toContain('"aiMode":"mock"');
   });
 
-  it("returns meta source key when XAI_API_KEY set", async () => {
+  it("captures key NDJSON meta", async () => {
     process.env.AI_MODE = "auto";
-    process.env.XAI_API_KEY = "xai-test-key";
+    process.env.XAI_API_KEY = "xai-capture-key";
     delete process.env.XAI_AUTH_FILE;
     resetAiEnvCache();
 
-    const meta = await firstMetaFromExecute();
-    expect(meta).toEqual({ aiMode: "live", source: "key" });
+    const line = await captureMetaNdjson("key");
+    expect(line).toContain('"source":"key"');
+    expect(line).toContain('"aiMode":"live"');
   });
 
-  it("returns meta source oauth when token file exists", async () => {
+  it("captures oauth NDJSON meta", async () => {
     process.env.AI_MODE = "auto";
-    process.env.XAI_API_KEY = "xai-test-key";
+    process.env.XAI_API_KEY = "xai-capture-key";
     process.env.XAI_AUTH_FILE = tokenFile;
     writeFileSync(
       tokenFile,
       JSON.stringify({
-        access_token: "oauth-access",
-        refresh_token: "oauth-refresh",
+        access_token: "oauth-capture",
+        refresh_token: "oauth-ref",
         obtained_at: Date.now(),
         expires_at: Date.now() + 7_200_000,
       }),
@@ -109,7 +115,8 @@ describe("POST /api/execute meta source", () => {
     );
     resetAiEnvCache();
 
-    const meta = await firstMetaFromExecute();
-    expect(meta).toEqual({ aiMode: "live", source: "oauth" });
+    const line = await captureMetaNdjson("oauth");
+    expect(line).toContain('"source":"oauth"');
+    expect(line).toContain('"aiMode":"live"');
   });
 });

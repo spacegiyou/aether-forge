@@ -6,14 +6,7 @@
 
 import { spawnSync, spawn } from "child_process";
 import { createServer } from "http";
-import {
-  mkdtempSync,
-  existsSync,
-  readFileSync,
-  mkdirSync,
-  writeFileSync,
-  rmSync,
-} from "fs";
+import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { tmpdir, homedir } from "os";
 import { join } from "path";
 
@@ -58,19 +51,23 @@ run("npm", ["run", "build"], finalGreen);
 run("npm", ["test"], finalGreen);
 run("npm", ["run", "test:oauth-script"], finalGreen);
 
-// 4: verbose POST /api/execute meta
-append(execModes, "=== POST /api/execute meta (route.test.ts verbose) ===");
-run("npx", ["vitest", "run", "src/app/api/execute/route.test.ts", "--reporter=verbose"], execModes);
+// 4: NDJSON meta capture (mock / key / oauth)
+append(execModes, "=== POST /api/execute NDJSON meta capture ===");
+run(
+  "npx",
+  ["vitest", "run", "src/app/api/execute/exec-meta-capture.test.ts", "--reporter=verbose"],
+  execModes
+);
 
 // 5: login --manual-paste with mock token server + real ~/.aetherforge path
-append(authRun, "=== npm run auth:xai --manual-paste (mock token server) ===");
+append(authRun, "=== npm run auth:xai --manual-paste (real ~/.aetherforge) ===");
+
+const realTokenDir = join(homedir(), ".aetherforge");
+const realTokenPath = join(realTokenDir, "xai-auth.json");
+const hadPriorToken = existsSync(realTokenPath);
+const priorToken = hadPriorToken ? readFileSync(realTokenPath, "utf8") : null;
 
 await new Promise((resolve, reject) => {
-  const fakeHome = mkdtempSync(join(tmpdir(), "aetherforge-home-"));
-  const tokenDir = join(fakeHome, ".aetherforge");
-  mkdirSync(tokenDir, { recursive: true });
-  const tokenPath = join(tokenDir, "xai-auth.json");
-
   const server = createServer((req, res) => {
     if (req.method === "POST") {
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -93,7 +90,6 @@ await new Promise((resolve, reject) => {
     const child = spawn("node", ["scripts/xai-oauth-login.mjs", "--manual-paste"], {
       env: {
         ...process.env,
-        HOME: fakeHome,
         XAI_OAUTH_TOKEN_URL: `http://127.0.0.1:${port}/token`,
       },
       stdio: ["pipe", "pipe", "pipe"],
@@ -111,16 +107,17 @@ await new Promise((resolve, reject) => {
       append(authRun, stdout);
       if (stderr) append(authRun, `stderr: ${stderr}`);
       append(authRun, `login --manual-paste exit=${code}`);
+      append(authRun, `token path: ${realTokenPath}`);
 
       if (code !== 0) {
         reject(new Error(`login --manual-paste failed: ${code}`));
         return;
       }
-      if (!existsSync(tokenPath)) {
-        reject(new Error(`expected token at ${tokenPath}`));
+      if (!existsSync(realTokenPath)) {
+        reject(new Error(`expected token at ${realTokenPath}`));
         return;
       }
-      const saved = JSON.parse(readFileSync(tokenPath, "utf8"));
+      const saved = JSON.parse(readFileSync(realTokenPath, "utf8"));
       if (!saved.obtained_at || !saved.expires_at) {
         reject(new Error("token missing obtained_at/expires_at"));
         return;
@@ -129,9 +126,16 @@ await new Promise((resolve, reject) => {
         reject(new Error("stdout leaked access token"));
         return;
       }
-      append(authRun, `token saved: ${tokenPath}`);
       append(authRun, `obtained_at=${saved.obtained_at} expires_at=${saved.expires_at}`);
-      rmSync(fakeHome, { recursive: true, force: true });
+
+      // Restore prior token state — evidence run must not leave test tokens behind
+      if (hadPriorToken && priorToken) {
+        writeFileSync(realTokenPath, priorToken, { mode: 0o600 });
+        append(authRun, "restored prior token file");
+      } else {
+        rmSync(realTokenPath, { force: true });
+        append(authRun, "removed capture token file");
+      }
       resolve();
     });
   });

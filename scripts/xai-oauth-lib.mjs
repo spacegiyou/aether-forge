@@ -1,6 +1,6 @@
 /**
  * Shared xAI OAuth helpers — used by xai-oauth-login.mjs, logout, and verification tests.
- * Verified: accounts.x.ai/oauth2/authorize (browser); auth.x.ai OIDC token endpoint (hermes-agent).
+ * Verified: auth.x.ai OIDC discovery (hermes-agent hermes_cli/auth.py).
  */
 
 import { mkdirSync, writeFileSync, renameSync, existsSync, unlinkSync } from "fs";
@@ -8,11 +8,10 @@ import { homedir } from "os";
 import { join } from "path";
 import { createHash } from "crypto";
 
-export const XAI_OAUTH_ACCOUNTS_HOST = "https://accounts.x.ai";
-export const XAI_OAUTH_DISCOVERY_URL = `${XAI_OAUTH_ACCOUNTS_HOST}/.well-known/openid-configuration`;
-export const XAI_OAUTH_DISCOVERY_FALLBACK_URL = "https://auth.x.ai/.well-known/openid-configuration";
-export const XAI_OAUTH_AUTHORIZE_URL = `${XAI_OAUTH_ACCOUNTS_HOST}/oauth2/authorize`;
-export const XAI_OAUTH_TOKEN_URL = "https://auth.x.ai/oauth2/token";
+export const XAI_OAUTH_ISSUER = "https://auth.x.ai";
+export const XAI_OAUTH_DISCOVERY_URL = `${XAI_OAUTH_ISSUER}/.well-known/openid-configuration`;
+export const XAI_OAUTH_AUTHORIZE_URL = `${XAI_OAUTH_ISSUER}/oauth2/authorize`;
+export const XAI_OAUTH_TOKEN_URL = `${XAI_OAUTH_ISSUER}/oauth2/token`;
 
 export function resolveTokenUrl() {
   return process.env.XAI_OAUTH_TOKEN_URL?.trim() || XAI_OAUTH_TOKEN_URL;

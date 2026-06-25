@@ -49,10 +49,11 @@ export async function* streamLiveExecution(
   goal: string,
   credential: XaiCredential
 ): AsyncGenerator<ExecuteStreamEvent> {
-  yield { type: "meta", aiMode: "live", source: credential.source };
-
   try {
     const { execution, source } = await fetchGrokExecution(goal, credential);
+
+    // Meta reflects post-recovery source (e.g. key after OAuth 401 refresh)
+    yield { type: "meta", aiMode: "live", source };
 
     for (let i = 0; i < execution.steps.length; i++) {
       const s = execution.steps[i];
