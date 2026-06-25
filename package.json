@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
+    "test": "vitest run --reporter=dot",
     "test:oauth-script": "node --test scripts/xai-oauth-lib.test.mjs",
-    "test:all": "vitest run && npm run test:oauth-script",
+    "test:oauth-contract": "node --test scripts/oauth-contract.test.mjs",
+    "test:all": "vitest run --reporter=dot && npm run test:oauth-script && npm run test:oauth-contract",
     "auth:xai": "node scripts/xai-oauth-login.mjs",
     "auth:xai:logout": "node scripts/xai-oauth-logout.mjs",
     "deploy": "bash scripts/deploy-vercel.sh"
@@ -30,6 +31,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "debug": "^4.4.3",
+    "entities": "^8.0.0",
     "framer-motion": "^12.40.0",
     "jszip": "^3.10.1",
     "lucide-react": "^1.21.0",
@@ -42,6 +44,7 @@
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.6.0",
     "three": "^0.184.0",
+    "tough-cookie": "^6.0.1",
     "xml-name-validator": "^5.0.0",
     "zod": "^4.4.3"
   },

@@ -1,0 +1,12 @@
+{
+  "BROWSER_UI_HOST": "accounts.x.ai",
+  "OIDC_ISSUER": "https://auth.x.ai",
+  "CLIENT_ID": "b1a00492-073a-47ea-816f-4c329264a828",
+  "SCOPE": "openid profile email offline_access grok-cli:access api:access",
+  "REDIRECT_HOST": "127.0.0.1",
+  "REDIRECT_PORT": 56121,
+  "REDIRECT_PATH": "/callback",
+  "PKCE_METHOD": "S256",
+  "REFRESH_SKEW_SECONDS": 3600,
+  "AUTHORIZE_PLAN": "generic"
+}

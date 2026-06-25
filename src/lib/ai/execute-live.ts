@@ -8,6 +8,7 @@ import { generateGrokImage } from "./generate-image";
 import type { XaiCredential } from "./credentials";
 import type { ExecutionOutput, ExecutionStep, AgentType } from "@/lib/generators/goal-processor";
 import type { ExecuteStreamEvent } from "./stream-events";
+import { planPostFetchMetaEvents, planStreamMetaEvents } from "./stream-meta";
 
 const LIVE_STEP_MS = 120;
 
@@ -50,14 +51,14 @@ export async function* streamLiveExecution(
   credential: XaiCredential
 ): AsyncGenerator<ExecuteStreamEvent> {
   try {
-    // Early meta so UI badge reflects attempted credential even if fetch fails
-    yield { type: "meta", aiMode: "live", source: credential.source };
+    for (const event of planStreamMetaEvents(credential.source)) {
+      yield event;
+    }
 
     const { execution, source } = await fetchGrokExecution(goal, credential);
 
-    // Post-recovery meta when 401/403 fallback changed the active source
-    if (source !== credential.source) {
-      yield { type: "meta", aiMode: "live", source };
+    for (const event of planPostFetchMetaEvents(credential.source, source)) {
+      yield event;
     }
 
     for (let i = 0; i < execution.steps.length; i++) {

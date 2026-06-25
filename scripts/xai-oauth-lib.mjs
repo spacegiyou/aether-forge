@@ -1,28 +1,42 @@
 /**
- * Shared xAI OAuth helpers — used by xai-oauth-login.mjs, logout, and verification tests.
- * Verified: auth.x.ai OIDC discovery (hermes-agent hermes_cli/auth.py).
+ * Shared xAI OAuth helpers — constants from scripts/oauth-contract.mjs only.
  */
 
 import { mkdirSync, writeFileSync, renameSync, existsSync, unlinkSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { createHash } from "crypto";
+import {
+  XAI_OAUTH_ISSUER,
+  XAI_OAUTH_DISCOVERY_URL,
+  XAI_OAUTH_AUTHORIZE_URL,
+  XAI_OAUTH_TOKEN_URL,
+  XAI_OAUTH_CLIENT_ID,
+  XAI_OAUTH_SCOPE,
+  REDIRECT_HOST,
+  REDIRECT_PORT,
+  REDIRECT_PATH,
+  REDIRECT_URI,
+  PKCE_METHOD,
+  AUTHORIZE_PLAN,
+} from "./oauth-contract.mjs";
 
-export const XAI_OAUTH_ISSUER = "https://auth.x.ai";
-export const XAI_OAUTH_DISCOVERY_URL = `${XAI_OAUTH_ISSUER}/.well-known/openid-configuration`;
-export const XAI_OAUTH_AUTHORIZE_URL = `${XAI_OAUTH_ISSUER}/oauth2/authorize`;
-export const XAI_OAUTH_TOKEN_URL = `${XAI_OAUTH_ISSUER}/oauth2/token`;
+export {
+  XAI_OAUTH_ISSUER,
+  XAI_OAUTH_DISCOVERY_URL,
+  XAI_OAUTH_AUTHORIZE_URL,
+  XAI_OAUTH_TOKEN_URL,
+  XAI_OAUTH_CLIENT_ID,
+  XAI_OAUTH_SCOPE,
+  REDIRECT_HOST,
+  REDIRECT_PORT,
+  REDIRECT_PATH,
+  REDIRECT_URI,
+};
 
 export function resolveTokenUrl() {
   return process.env.XAI_OAUTH_TOKEN_URL?.trim() || XAI_OAUTH_TOKEN_URL;
 }
-export const XAI_OAUTH_CLIENT_ID = "b1a00492-073a-47ea-816f-4c329264a828";
-export const XAI_OAUTH_SCOPE =
-  "openid profile email offline_access grok-cli:access api:access";
-export const REDIRECT_HOST = "127.0.0.1";
-export const REDIRECT_PORT = 56121;
-export const REDIRECT_PATH = "/callback";
-export const REDIRECT_URI = `http://${REDIRECT_HOST}:${REDIRECT_PORT}${REDIRECT_PATH}`;
 export const TIMEOUT_MS = 180_000;
 
 export function tokenSearchPaths() {
@@ -89,7 +103,7 @@ export async function exchangeCode(code, verifier, fetcher = fetch) {
       client_id: XAI_OAUTH_CLIENT_ID,
       code_verifier: verifier,
       code_challenge: challenge,
-      code_challenge_method: "S256",
+      code_challenge_method: PKCE_METHOD,
     }).toString(),
   });
   const body = await res.json();
@@ -110,8 +124,8 @@ export function buildAuthorizeUrl(state, verifier) {
     scope: XAI_OAUTH_SCOPE,
     state,
     code_challenge: pkceChallenge(verifier),
-    code_challenge_method: "S256",
-    plan: "generic",
+    code_challenge_method: PKCE_METHOD,
+    plan: AUTHORIZE_PLAN,
   });
   return `${XAI_OAUTH_AUTHORIZE_URL}?${params.toString()}`;
 }

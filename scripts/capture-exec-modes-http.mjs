@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
- * POST /api/execute against a running next start server — captures NDJSON meta per mode.
- * Plan step 4: real HTTP to /api/execute (not vitest route handler).
+ * POST /api/execute against next start — drain full NDJSON, assert last meta source.
  */
 
 import { spawn, spawnSync } from "child_process";
@@ -9,7 +8,6 @@ import { mkdtempSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
-const SCRATCH = process.env.SCRATCH_DIR || join(tmpdir(), "aetherforge-exec-modes");
 const PORT = Number(process.env.EXEC_MODES_PORT || 3456);
 const BASE = `http://127.0.0.1:${PORT}`;
 
@@ -31,7 +29,7 @@ async function waitForServer(ms = 30_000) {
   throw new Error(`server not ready on ${BASE}`);
 }
 
-async function captureMeta(label, env, opts = {}) {
+async function drainStream(label, env, opts = {}) {
   const tmpDir = mkdtempSync(join(tmpdir(), `aetherforge-http-${label}-`));
   const tokenFile = join(tmpDir, "xai-auth.json");
 
@@ -63,10 +61,6 @@ async function captureMeta(label, env, opts = {}) {
     cwd: process.cwd(),
   });
 
-  let serverLog = "";
-  server.stdout.on("data", (d) => (serverLog += d));
-  server.stderr.on("data", (d) => (serverLog += d));
-
   try {
     await waitForServer();
     const res = await fetch(`${BASE}/api/execute`, {
@@ -81,50 +75,56 @@ async function captureMeta(label, env, opts = {}) {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    const events = [];
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      for (const line of buffer.split("\n")) {
+      const parts = buffer.split("\n");
+      buffer = parts.pop() ?? "";
+      for (const line of parts) {
         if (!line.trim()) continue;
-        const event = JSON.parse(line);
-        if (event.type === "meta") {
-          const ndjson = JSON.stringify(event);
-          log(`CAPTURE_NDJSON_META [${label}]: ${ndjson}`);
-          log(`ASSERT_SOURCE [${label}]: ${event.source}`);
-          await reader.cancel();
-          return ndjson;
-        }
+        events.push(JSON.parse(line));
       }
     }
-    throw new Error(`no meta event for ${label}`);
+    if (buffer.trim()) events.push(JSON.parse(buffer));
+
+    const metas = events.filter((e) => e.type === "meta");
+    if (metas.length === 0) throw new Error(`no meta events for ${label}`);
+    const lastMeta = metas.at(-1);
+
+    log(`CAPTURE_NDJSON_META [${label}]: ${JSON.stringify(lastMeta)}`);
+    log(`ASSERT_SOURCE [${label}]: ${lastMeta.source}`);
+    log(`META_COUNT [${label}]: ${metas.length}`);
+    log(`TERMINAL [${label}]: ${events.at(-1)?.type ?? "none"}`);
+
+    if (lastMeta.source !== opts.expectSource) {
+      throw new Error(
+        `${label}: expected last meta source ${opts.expectSource}, got ${lastMeta.source}`
+      );
+    }
+    return lastMeta;
   } finally {
     server.kill("SIGTERM");
     await new Promise((r) => server.on("close", r));
     rmSync(tmpDir, { recursive: true, force: true });
-    if (serverLog && process.env.DEBUG_SERVER) log(serverLog);
   }
 }
 
-// Ensure production build exists
 const build = spawnSync("npm", ["run", "build"], { encoding: "utf8", cwd: process.cwd() });
 if (build.status !== 0) {
   console.error(build.stdout + build.stderr);
   process.exit(build.status ?? 1);
 }
 
-log(`=== HTTP POST /api/execute meta capture (next start :${PORT}) ===`);
-log(`scratch: ${SCRATCH}`);
+log(`=== HTTP POST /api/execute full-stream meta (next start :${PORT}) ===`);
 
-const scenarios = [
-  { label: "mock", env: { AI_MODE: "auto" }, dropKey: true },
-  { label: "key", env: { AI_MODE: "auto", XAI_API_KEY: "xai-http-capture-key" } },
-  { label: "oauth", env: { AI_MODE: "auto", XAI_API_KEY: "xai-http-capture-key" } },
-];
-
-for (const s of scenarios) {
-  const env = { ...s.env };
-  await captureMeta(s.label, env, { dropKey: s.dropKey });
-}
+await drainStream("mock", { AI_MODE: "auto" }, { dropKey: true, expectSource: "mock" });
+await drainStream(
+  "key",
+  { AI_MODE: "auto", XAI_API_KEY: "xai-http-capture-key" },
+  { expectSource: "key" }
+);
+await drainStream("oauth", { AI_MODE: "auto" }, { dropKey: true, expectSource: "oauth" });
 
 log("=== HTTP exec-modes capture complete ===");

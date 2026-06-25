@@ -1,16 +1,20 @@
 /**
- * xAI OAuth constants — NousResearch/hermes-agent hermes_cli/auth.py + auth.x.ai OIDC discovery.
- * Verified 2026-06-25: auth.x.ai/.well-known/openid-configuration (accounts.x.ai discovery 404s).
+ * Re-exports from scripts/oauth-contract.json — single source of truth.
+ * Structural sync enforced by scripts/oauth-contract.test.mjs.
  */
-export const XAI_OAUTH_ISSUER = "https://auth.x.ai";
-export const XAI_OAUTH_DISCOVERY_URL = `${XAI_OAUTH_ISSUER}/.well-known/openid-configuration`;
-export const XAI_OAUTH_AUTHORIZE_URL = `${XAI_OAUTH_ISSUER}/oauth2/authorize`;
-export const XAI_OAUTH_TOKEN_URL = `${XAI_OAUTH_ISSUER}/oauth2/token`;
-export const XAI_OAUTH_CLIENT_ID = "b1a00492-073a-47ea-816f-4c329264a828";
-export const XAI_OAUTH_SCOPE =
-  "openid profile email offline_access grok-cli:access api:access";
-export const XAI_OAUTH_REDIRECT_HOST = "127.0.0.1";
-export const XAI_OAUTH_REDIRECT_PORT = 56121;
-export const XAI_OAUTH_REDIRECT_PATH = "/callback";
-export const XAI_OAUTH_REDIRECT_URI = `http://${XAI_OAUTH_REDIRECT_HOST}:${XAI_OAUTH_REDIRECT_PORT}${XAI_OAUTH_REDIRECT_PATH}`;
-export const XAI_OAUTH_REFRESH_SKEW_SECONDS = 3600;
+import contract from "../../../scripts/oauth-contract.json";
+
+export const XAI_OAUTH_ISSUER = contract.OIDC_ISSUER;
+export const XAI_OAUTH_DISCOVERY_URL = `${contract.OIDC_ISSUER}/.well-known/openid-configuration`;
+export const XAI_OAUTH_AUTHORIZE_URL = `${contract.OIDC_ISSUER}/oauth2/authorize`;
+export const XAI_OAUTH_TOKEN_URL = `${contract.OIDC_ISSUER}/oauth2/token`;
+export const XAI_OAUTH_CLIENT_ID = contract.CLIENT_ID;
+export const XAI_OAUTH_SCOPE = contract.SCOPE;
+export const XAI_OAUTH_REDIRECT_HOST = contract.REDIRECT_HOST;
+export const XAI_OAUTH_REDIRECT_PORT = contract.REDIRECT_PORT;
+export const XAI_OAUTH_REDIRECT_PATH = contract.REDIRECT_PATH;
+export const XAI_OAUTH_REDIRECT_URI = `http://${contract.REDIRECT_HOST}:${contract.REDIRECT_PORT}${contract.REDIRECT_PATH}`;
+export const XAI_OAUTH_REFRESH_SKEW_SECONDS = contract.REFRESH_SKEW_SECONDS;
+
+export const XAI_OAUTH_BROWSER_UI_HOST = contract.BROWSER_UI_HOST;
+export const XAI_OAUTH_ACCOUNTS_DISCOVERY_URL = `https://${contract.BROWSER_UI_HOST}/.well-known/openid-configuration`;

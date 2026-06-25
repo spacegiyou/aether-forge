@@ -9,7 +9,8 @@ import { createServer } from "http";
 import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-import { exchangeCode, XAI_OAUTH_TOKEN_URL } from "./xai-oauth-lib.mjs";
+import { exchangeCode } from "./xai-oauth-lib.mjs";
+import { TOKEN_URL } from "./oauth-contract.mjs";
 
 const SCRATCH = process.env.SCRATCH_DIR || join(process.cwd(), ".scratch-oauth-evidence");
 mkdirSync(SCRATCH, { recursive: true });
@@ -60,19 +61,20 @@ function runNode(script, logPath, extraEnv = {}) {
 }
 
 // 1: single clean lint && build && test transcript
-runShell("npm run lint && npm run build && npm test && npm run test:oauth-script", finalGreen);
+runShell(
+  "npm run lint && npm run build && npm test && npm run test:oauth-script && npm run test:oauth-contract",
+  finalGreen
+);
 
 // 2: OAuth endpoint verification (accounts + auth)
-append(authRun, "=== verify-xai-oauth-endpoints (accounts.x.ai + auth.x.ai) ===");
 runNode("scripts/verify-xai-oauth-endpoints.mjs", authRun);
 
-// 3: real token endpoint probe (invalid code — proves auth.x.ai reachable, no secrets)
-append(authRun, "=== real auth.x.ai token endpoint probe (invalid code) ===");
+append(authRun, "=== real OIDC token endpoint probe (invalid code) ===");
 try {
   await exchangeCode("invalid-capture-code", "capture-verifier-abc");
   throw new Error("expected token exchange to fail for invalid code");
 } catch (e) {
-  append(authRun, `token_url: ${XAI_OAUTH_TOKEN_URL}`);
+  append(authRun, `token_url: ${TOKEN_URL}`);
   append(authRun, `expected_token_exchange_error: ${e instanceof Error ? e.message : String(e)}`);
 }
 
@@ -127,7 +129,7 @@ await new Promise((resolve, reject) => {
       if (stderr) append(authRun, `stderr: ${stderr}`);
       append(authRun, `login --manual-paste exit=${code}`);
       append(authRun, `token path: ${realTokenPath}`);
-      append(authRun, `authorize URL host: auth.x.ai (browser UI may show accounts.x.ai)`);
+      append(authRun, "authorize URL from oauth-contract AUTHORIZE_URL");
 
       if (code !== 0) {
         reject(new Error(`login --manual-paste failed: ${code}`));
@@ -174,8 +176,7 @@ writeFileSync(
     spawnSync("grep", ["-E", "xai-auth|aetherforge", ".gitignore"], { encoding: "utf8" }).stdout.trim(),
     "",
     `default home token path: ${realTokenPath}`,
-    "accounts.x.ai discovery: 404 (login UI host)",
-    "auth.x.ai discovery: canonical OIDC (hermes-agent)",
+    "OAuth contract: accounts UI host + auth OIDC issuer (see oauth-contract.json)",
   ].join("\n") + "\n"
 );
 

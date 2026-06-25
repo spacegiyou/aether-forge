@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { streamLiveExecution } from "./execute-live";
+import { planStreamMetaEvents } from "./stream-meta";
 import { createGrokJsonCompletion } from "./grok-completion";
 import { getGrokClient } from "./grok-client";
 import { generateGrokImage } from "./generate-image";
@@ -85,8 +86,7 @@ describe("streamLiveExecution", () => {
     });
 
     const metas = events.filter((e) => e.type === "meta");
-    expect(metas[0]).toEqual({ type: "meta", aiMode: "live", source: "oauth" });
-    expect(metas.at(-1)).toEqual({ type: "meta", aiMode: "live", source: "key" });
+    expect(metas).toEqual(planStreamMetaEvents("oauth", "key"));
     expect(oauthCalls).toBeGreaterThanOrEqual(2);
     expect(vi.mocked(createGrokJsonCompletion).mock.calls.some((c) => c[1] === "key")).toBe(true);
   });
@@ -100,7 +100,7 @@ describe("streamLiveExecution", () => {
     });
 
     const metas = events.filter((e) => e.type === "meta");
-    expect(metas).toEqual([{ type: "meta", aiMode: "live", source: "oauth" }]);
+    expect(metas).toEqual(planStreamMetaEvents("oauth"));
     expect(events.find((e) => e.type === "error")).toBeDefined();
   });
 });
