@@ -17,9 +17,13 @@ import {
   pkceChallenge,
   XAI_OAUTH_CLIENT_ID,
   XAI_OAUTH_TOKEN_URL,
-  XAI_OAUTH_AUTHORIZE_URL,
 } from "./xai-oauth-lib.mjs";
-import { AUTHORIZE_URL, PKCE_METHOD, AUTHORIZE_PLAN } from "./oauth-contract.mjs";
+import {
+  AUTHORIZE_URL,
+  BROWSER_AUTHORIZE_URL,
+  PKCE_METHOD,
+  AUTHORIZE_PLAN,
+} from "./oauth-contract.mjs";
 
 describe("xai-oauth-lib (shipped login code)", () => {
   let tmpDir;
@@ -46,10 +50,10 @@ describe("xai-oauth-lib (shipped login code)", () => {
     assert.deepEqual(parseCallbackInput("bare-code"), { code: "bare-code", state: null });
   });
 
-  it("buildAuthorizeUrl uses contract authorize URL + plan", () => {
+  it("buildAuthorizeUrl uses BROWSER_AUTHORIZE_URL + plan", () => {
     const url = buildAuthorizeUrl("state123", "verifier123");
-    assert.ok(url.startsWith(AUTHORIZE_URL));
-    assert.ok(url.startsWith(XAI_OAUTH_AUTHORIZE_URL));
+    assert.ok(url.startsWith(BROWSER_AUTHORIZE_URL));
+    assert.notEqual(url.startsWith(AUTHORIZE_URL), true);
     assert.ok(url.includes(`client_id=${XAI_OAUTH_CLIENT_ID}`));
     assert.ok(url.includes(`plan=${AUTHORIZE_PLAN}`));
     assert.ok(url.includes(`code_challenge_method=${PKCE_METHOD}`));

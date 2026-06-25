@@ -12,6 +12,10 @@ export const AUTHORIZE_URL = `${OIDC_ISSUER}/oauth2/authorize`;
 export const TOKEN_URL = `${OIDC_ISSUER}/oauth2/token`;
 export const ACCOUNTS_DISCOVERY_URL = `https://${BROWSER_UI_HOST}/.well-known/openid-configuration`;
 export const ACCOUNTS_AUTHORIZE_URL = `https://${BROWSER_UI_HOST}/oauth2/authorize`;
+export const ACCOUNTS_TOKEN_URL = `https://${BROWSER_UI_HOST}/oauth2/token`;
+/** Directive browser entry — login UI at accounts.x.ai */
+export const BROWSER_AUTHORIZE_URL = ACCOUNTS_AUTHORIZE_URL;
+export const VERIFICATION_NOTE = contract.VERIFICATION_NOTE ?? "";
 
 export const CLIENT_ID = contract.CLIENT_ID;
 export const SCOPE = contract.SCOPE;
@@ -55,11 +59,32 @@ export async function verifyOAuthContract(fetcher = fetch) {
     throw new Error(`expected accounts discovery 404, got ${accountsDiscovery.status}`);
   }
 
-  const accountsAuthorize = await fetcher(ACCOUNTS_AUTHORIZE_URL, {
+  const accountsAuthorizeHead = await fetcher(ACCOUNTS_AUTHORIZE_URL, {
     method: "HEAD",
     redirect: "manual",
   });
-  log(`accounts authorize HEAD: ${accountsAuthorize.status}`);
+  log(`accounts authorize HEAD: ${accountsAuthorizeHead.status}`);
+
+  const accountsAuthorizeGet = await fetcher(
+    `${ACCOUNTS_AUTHORIZE_URL}?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPE)}&state=probe&code_challenge_method=${PKCE_METHOD}&plan=${AUTHORIZE_PLAN}`,
+    {
+      redirect: "manual",
+      headers: { "User-Agent": "AetherForge-OAuth-Verify/1.0" },
+    }
+  );
+  log(`accounts authorize GET (browser UI): ${accountsAuthorizeGet.status}`);
+  const okBrowser =
+    (accountsAuthorizeGet.status >= 200 && accountsAuthorizeGet.status < 400) ||
+    accountsAuthorizeGet.status === 403;
+  if (!okBrowser) {
+    throw new Error(`accounts authorize GET unexpected status: ${accountsAuthorizeGet.status}`);
+  }
+
+  const accountsTokenHead = await fetcher(ACCOUNTS_TOKEN_URL, {
+    method: "HEAD",
+    redirect: "manual",
+  });
+  log(`accounts token HEAD: ${accountsTokenHead.status}`);
 
   const authDiscovery = await fetcher(OIDC_DISCOVERY_URL);
   log(`auth discovery: ${OIDC_DISCOVERY_URL}`);
@@ -91,9 +116,10 @@ export async function verifyOAuthContract(fetcher = fetch) {
   const authAuthorize = await fetcher(AUTHORIZE_URL, { method: "HEAD", redirect: "manual" });
   log(`auth authorize HEAD: ${authAuthorize.status}`);
 
-  log(
-    "note: accounts.x.ai = browser login UI (directive); auth.x.ai = OIDC issuer (hermes-agent)"
-  );
+  log(`verification_note: ${VERIFICATION_NOTE}`);
+  log(`browser_authorize: ${BROWSER_AUTHORIZE_URL}`);
+  log(`oidc_authorize: ${AUTHORIZE_URL}`);
+  log(`oidc_token: ${TOKEN_URL}`);
 
   return { lines, discovery };
 }

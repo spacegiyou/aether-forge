@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
+import { mkdirSync } from "fs";
 import {
   isExpired,
+  loadOAuthToken,
   refreshOAuthToken,
   saveOAuthToken,
   type OAuthTokenData,
@@ -74,6 +76,37 @@ describe("oauth-store", () => {
     expect(init.method).toBe("POST");
     expect(String(init.body)).toContain("grant_type=refresh_token");
     expect(String(init.body)).toContain("old-refresh");
+  });
+
+  it("loadOAuthToken falls back to local file when home file is corrupt", () => {
+    const prevHome = process.env.HOME;
+    const prevCwd = process.cwd();
+    const prevAuthFile = process.env.XAI_AUTH_FILE;
+
+    const homeDir = mkdtempSync(join(tmpdir(), "aetherforge-oauth-home-"));
+    const homeTokenDir = join(homeDir, ".aetherforge");
+    mkdirSync(homeTokenDir, { recursive: true });
+    writeFileSync(join(homeTokenDir, "xai-auth.json"), "not-valid-json{{{", "utf8");
+
+    const cwdDir = mkdtempSync(join(tmpdir(), "aetherforge-oauth-cwd-"));
+    const valid: OAuthTokenData = {
+      access_token: "local-access",
+      refresh_token: "local-refresh",
+      obtained_at: Date.now(),
+      expires_at: Date.now() + 7_200_000,
+    };
+    writeFileSync(join(cwdDir, ".xai-auth.json"), JSON.stringify(valid), "utf8");
+
+    delete process.env.XAI_AUTH_FILE;
+    process.env.HOME = homeDir;
+    process.chdir(cwdDir);
+
+    expect(loadOAuthToken()).toEqual(valid);
+
+    process.env.HOME = prevHome;
+    process.chdir(prevCwd);
+    if (prevAuthFile === undefined) delete process.env.XAI_AUTH_FILE;
+    else process.env.XAI_AUTH_FILE = prevAuthFile;
   });
 
   it("refreshOAuthToken deletes scoped token file on invalid_grant", async () => {

@@ -59,7 +59,7 @@ export function loadOAuthToken(): OAuthTokenData | null {
         return data;
       }
     } catch {
-      return null;
+      continue;
     }
   }
   return null;

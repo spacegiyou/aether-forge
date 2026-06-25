@@ -19,6 +19,7 @@ import {
   REDIRECT_URI,
   PKCE_METHOD,
   AUTHORIZE_PLAN,
+  BROWSER_AUTHORIZE_URL,
 } from "./oauth-contract.mjs";
 
 export {
@@ -127,7 +128,7 @@ export function buildAuthorizeUrl(state, verifier) {
     code_challenge_method: PKCE_METHOD,
     plan: AUTHORIZE_PLAN,
   });
-  return `${XAI_OAUTH_AUTHORIZE_URL}?${params.toString()}`;
+  return `${BROWSER_AUTHORIZE_URL}?${params.toString()}`;
 }
 
 export function parseCallbackInput(input) {

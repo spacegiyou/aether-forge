@@ -9,6 +9,7 @@ import { readFileSync, readdirSync, statSync } from "fs";
 import { join, relative } from "path";
 import {
   BROWSER_UI_HOST,
+  BROWSER_AUTHORIZE_URL,
   OIDC_ISSUER,
   AUTHORIZE_URL,
   TOKEN_URL,
@@ -57,6 +58,7 @@ function countHostLiterals(filePath, host) {
 describe("oauth-contract", () => {
   it("exports hermes-derived constants", () => {
     assert.equal(BROWSER_UI_HOST, "accounts.x.ai");
+    assert.equal(BROWSER_AUTHORIZE_URL, "https://accounts.x.ai/oauth2/authorize");
     assert.equal(OIDC_ISSUER, "https://auth.x.ai");
     assert.equal(AUTHORIZE_URL, "https://auth.x.ai/oauth2/authorize");
     assert.equal(TOKEN_URL, "https://auth.x.ai/oauth2/token");
@@ -69,6 +71,7 @@ describe("oauth-contract", () => {
   it("verifyOAuthContract probes accounts 404 and auth OIDC match", async () => {
     const { lines, discovery } = await verifyOAuthContract();
     assert.ok(lines.some((l) => l.includes("accounts discovery status: 404")));
+    assert.ok(lines.some((l) => l.includes("accounts authorize GET (browser UI):")));
     assert.ok(lines.some((l) => l.includes("auth discovery status: 200")));
     assert.equal(discovery.authorization_endpoint, AUTHORIZE_URL);
     assert.equal(discovery.token_endpoint, TOKEN_URL);

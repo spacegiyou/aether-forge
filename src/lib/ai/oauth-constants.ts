@@ -17,4 +17,5 @@ export const XAI_OAUTH_REDIRECT_URI = `http://${contract.REDIRECT_HOST}:${contra
 export const XAI_OAUTH_REFRESH_SKEW_SECONDS = contract.REFRESH_SKEW_SECONDS;
 
 export const XAI_OAUTH_BROWSER_UI_HOST = contract.BROWSER_UI_HOST;
+export const XAI_OAUTH_BROWSER_AUTHORIZE_URL = `https://${contract.BROWSER_UI_HOST}/oauth2/authorize`;
 export const XAI_OAUTH_ACCOUNTS_DISCOVERY_URL = `https://${contract.BROWSER_UI_HOST}/.well-known/openid-configuration`;

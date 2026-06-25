@@ -41,7 +41,7 @@ async function drainStream(label, env, opts = {}) {
   };
   if (opts.dropKey) delete childEnv.XAI_API_KEY;
   delete childEnv.XAI_AUTH_FILE;
-  if (label === "oauth") {
+  if (label === "oauth" || label === "oauth-recovery") {
     childEnv.XAI_AUTH_FILE = tokenFile;
     writeFileSync(
       tokenFile,
@@ -103,6 +103,11 @@ async function drainStream(label, env, opts = {}) {
         `${label}: expected last meta source ${opts.expectSource}, got ${lastMeta.source}`
       );
     }
+    if (opts.expectMetaCount !== undefined && metas.length !== opts.expectMetaCount) {
+      throw new Error(
+        `${label}: expected META_COUNT ${opts.expectMetaCount}, got ${metas.length}`
+      );
+    }
     return lastMeta;
   } finally {
     server.kill("SIGTERM");
@@ -125,6 +130,17 @@ await drainStream(
   { AI_MODE: "auto", XAI_API_KEY: "xai-http-capture-key" },
   { expectSource: "key" }
 );
-await drainStream("oauth", { AI_MODE: "auto" }, { dropKey: true, expectSource: "oauth" });
+await drainStream("oauth", { AI_MODE: "auto" }, {
+  dropKey: true,
+  expectSource: "oauth",
+  expectMetaCount: 1,
+});
+
+// Real api.x.ai 401 → OAuth refresh (real token URL) → key escape; unmocked network
+await drainStream(
+  "oauth-recovery",
+  { AI_MODE: "auto", XAI_API_KEY: "xai-http-recovery-escape" },
+  { expectSource: "key", expectMetaCount: 2 }
+);
 
 log("=== HTTP exec-modes capture complete ===");
