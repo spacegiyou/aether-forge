@@ -267,7 +267,6 @@ log(`RECOVERY_KEY_SOURCE: ${useLiveKey ? "env XAI_API_KEY (unmocked key leg)" : 
 
 let proxy = null;
 let proxyBase = undefined;
-let proxyHits = [];
 
 if (!useLiveKey) {
   proxy = createXaiRecoveryProxy({ keyBearer: recoveryKey });

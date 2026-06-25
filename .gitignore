@@ -37,6 +37,7 @@ yarn-error.log*
 # xAI OAuth tokens (local demo only — never commit)
 .xai-auth.json
 .aetherforge/
+.scratch-oauth-evidence/
 
 # vercel
 .vercel
