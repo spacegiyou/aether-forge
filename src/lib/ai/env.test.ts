@@ -13,23 +13,24 @@ describe("ai env", () => {
     resetAiEnvCache();
   });
 
-  it("defaults to mock mode without API key", () => {
+  it("defaults to auto mode without API key", () => {
     delete process.env.AI_MODE;
     delete process.env.XAI_API_KEY;
     resetAiEnvCache();
-    expect(isMockMode()).toBe(true);
+    expect(isMockMode()).toBe(false);
+    expect(getAiEnv().AI_MODE).toBe("auto");
     expect(getAiEnv().GROK_TEXT_MODEL).toBe("grok-4.3");
   });
 
   it("requireLiveEnv throws without key", () => {
-    process.env.AI_MODE = "live";
+    process.env.AI_MODE = "key";
     delete process.env.XAI_API_KEY;
     resetAiEnvCache();
     expect(() => requireLiveEnv()).toThrow("XAI_API_KEY");
   });
 
-  it("requireLiveEnv succeeds with key in live mode", () => {
-    process.env.AI_MODE = "live";
+  it("requireLiveEnv succeeds with key in key mode", () => {
+    process.env.AI_MODE = "key";
     process.env.XAI_API_KEY = "xai-test-key";
     resetAiEnvCache();
     const env = requireLiveEnv();
@@ -37,8 +38,8 @@ describe("ai env", () => {
     expect(env.GROK_IMAGE_MODEL).toBe("grok-imagine-image-quality");
   });
 
-  it("validateAiEnvAtBoot runs eager Zod parse and rejects live without key", () => {
-    process.env.AI_MODE = "live";
+  it("validateAiEnvAtBoot runs eager Zod parse and rejects key mode without key", () => {
+    process.env.AI_MODE = "key";
     delete process.env.XAI_API_KEY;
     expect(() => validateAiEnvAtBoot()).toThrow("XAI_API_KEY");
   });

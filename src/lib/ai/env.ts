@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-/** AI_MODE defaults to mock — safe for CI/tests without XAI_API_KEY */
+/** AI_MODE defaults to auto — resolves to mock when no creds (CI-safe) */
 const aiEnvSchema = z.object({
-  AI_MODE: z.enum(["mock", "live"]).default("mock"),
+  AI_MODE: z.enum(["mock", "key", "oauth", "auto"]).default("auto"),
   XAI_API_KEY: z.string().min(1).optional(),
   GROK_TEXT_MODEL: z.string().default("grok-4.3"),
   GROK_FAST_MODEL: z.string().default("grok-code-fast-1"),
@@ -10,10 +10,11 @@ const aiEnvSchema = z.object({
 });
 
 export type AiEnv = z.infer<typeof aiEnvSchema>;
+export type AiMode = AiEnv["AI_MODE"];
 
 function readRawEnv(): Record<string, string | undefined> {
   return {
-    AI_MODE: process.env.AI_MODE ?? "mock",
+    AI_MODE: process.env.AI_MODE ?? "auto",
     XAI_API_KEY: process.env.XAI_API_KEY,
     GROK_TEXT_MODEL: process.env.GROK_TEXT_MODEL ?? "grok-4.3",
     GROK_FAST_MODEL: process.env.GROK_FAST_MODEL ?? "grok-code-fast-1",
@@ -30,8 +31,8 @@ let cached: AiEnv = parseAiEnv();
 /** Eager Zod validation at server boot — also runs on module load */
 export function validateAiEnvAtBoot(): AiEnv {
   cached = parseAiEnv();
-  if (cached.AI_MODE === "live" && !cached.XAI_API_KEY) {
-    throw new Error("XAI_API_KEY is required when AI_MODE=live");
+  if (cached.AI_MODE === "key" && !cached.XAI_API_KEY) {
+    throw new Error("XAI_API_KEY is required when AI_MODE=key");
   }
   return cached;
 }
@@ -47,18 +48,20 @@ export function isMockMode(): boolean {
   return getAiEnv().AI_MODE === "mock";
 }
 
+/** @deprecated Use resolveXaiCredential().source instead */
 export function isLiveMode(): boolean {
-  return getAiEnv().AI_MODE === "live";
+  const mode = getAiEnv().AI_MODE;
+  return mode === "key" || mode === "oauth";
 }
 
-/** Validates live credentials — call only on live execution paths */
+/** Validates API-key credentials — call only on key-forced paths */
 export function requireLiveEnv(): AiEnv & { XAI_API_KEY: string } {
   const env = getAiEnv();
-  if (env.AI_MODE !== "live") {
-    throw new Error("Live Grok calls require AI_MODE=live");
+  if (env.AI_MODE !== "key") {
+    throw new Error("API key calls require AI_MODE=key");
   }
   if (!env.XAI_API_KEY) {
-    throw new Error("XAI_API_KEY is required when AI_MODE=live");
+    throw new Error("XAI_API_KEY is required when AI_MODE=key");
   }
   return env as AiEnv & { XAI_API_KEY: string };
 }

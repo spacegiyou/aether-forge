@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "auth:xai": "node scripts/xai-oauth-login.mjs",
+    "auth:xai:logout": "node scripts/xai-oauth-logout.mjs",
     "deploy": "bash scripts/deploy-vercel.sh"
   },
   "dependencies": {

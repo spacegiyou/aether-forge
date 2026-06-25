@@ -1,5 +1,5 @@
 import { generateGrokImage } from "@/lib/ai/generate-image";
-import { isMockMode } from "@/lib/ai/env";
+import { resolveXaiCredential } from "@/lib/ai/credentials";
 
 export const runtime = "nodejs";
 
@@ -17,17 +17,18 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Prompt is required" }, { status: 400 });
   }
 
-  if (isMockMode()) {
+  const cred = await resolveXaiCredential();
+  if (cred.source === "mock") {
     return Response.json({
-      aiMode: "mock",
+      source: "mock",
       imageUrl: undefined,
       imagePrompt: prompt,
     });
   }
 
-  const result = await generateGrokImage(prompt);
+  const result = await generateGrokImage(prompt, cred);
   return Response.json({
-    aiMode: "live",
+    source: cred.source,
     imageUrl: result.url,
     imageError: result.error,
     imagePrompt: prompt,

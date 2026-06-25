@@ -3,7 +3,7 @@ import { parseNdjsonBuffer } from "./parse-stream";
 
 describe("parseNdjsonBuffer", () => {
   it("parses complete NDJSON lines", () => {
-    const input = '{"type":"meta","aiMode":"mock"}\n{"type":"done"}\n';
+    const input = '{"type":"meta","aiMode":"mock","source":"mock"}\n{"type":"done"}\n';
     const { events, remainder } = parseNdjsonBuffer(input);
     expect(events).toHaveLength(2);
     expect(events[0].type).toBe("meta");

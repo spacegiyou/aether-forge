@@ -15,20 +15,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ExecutionOutput } from "@/lib/generators/goal-processor";
+import {
+  sourceBadgeLabel,
+  sourceBadgeVariant,
+  isLiveSource,
+  type CredentialSource,
+} from "@/lib/ai/source-badge";
 import { Code2, ImageIcon, MessageCircle, BarChart3, Loader2, AlertCircle } from "lucide-react";
 
 interface OutputPanelProps {
   output: ExecutionOutput | null;
-  aiMode?: "mock" | "live";
+  source?: CredentialSource;
 }
 
-export function OutputPanel({ output, aiMode = "mock" }: OutputPanelProps) {
+export function OutputPanel({ output, source = "mock" }: OutputPanelProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageFailed, setImageFailed] = useState(false);
 
   if (!output) return null;
 
-  const showLiveImage = aiMode === "live" && output.imageUrl;
+  const showLiveImage = isLiveSource(source) && output.imageUrl;
+  const badgeVariant = sourceBadgeVariant(source);
+  const badgeLabel = sourceBadgeLabel(source);
 
   return (
     <AnimatePresence>
@@ -44,8 +52,8 @@ export function OutputPanel({ output, aiMode = "mock" }: OutputPanelProps) {
               <Code2 className="h-4 w-4 text-emerald-400" />
               Generated Code
               <span className="ml-auto font-mono text-[10px] text-muted-foreground">{output.code.filename}</span>
-              <Badge variant={aiMode === "live" ? "green" : "default"}>
-                {aiMode === "live" ? "Live" : "Demo"}
+              <Badge variant={badgeVariant}>
+                {badgeLabel}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -114,8 +122,8 @@ export function OutputPanel({ output, aiMode = "mock" }: OutputPanelProps) {
             <CardTitle className="flex items-center gap-2 text-sm">
               <MessageCircle className="h-4 w-4 text-cyan-400" />
               X Thread Draft
-              <Badge variant={aiMode === "live" ? "green" : "default"} className="ml-auto">
-                {aiMode === "live" ? "Live" : "Demo"}
+              <Badge variant={badgeVariant} className="ml-auto">
+                {badgeLabel}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -135,8 +143,8 @@ export function OutputPanel({ output, aiMode = "mock" }: OutputPanelProps) {
             <CardTitle className="flex items-center gap-2 text-sm">
               <BarChart3 className="h-4 w-4 text-amber-400" />
               Swarm Metrics
-              <Badge variant={aiMode === "live" ? "green" : "amber"} className="ml-auto">
-                {aiMode === "live" ? "Live" : "Demo"}
+              <Badge variant={source === "mock" ? "amber" : badgeVariant} className="ml-auto">
+                {badgeLabel}
               </Badge>
             </CardTitle>
           </CardHeader>

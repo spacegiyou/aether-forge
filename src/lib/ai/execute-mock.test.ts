@@ -8,7 +8,7 @@ describe("streamMockExecution", () => {
       events.push(event);
     }
 
-    expect(events[0]).toEqual({ type: "meta", aiMode: "mock" });
+    expect(events[0]).toEqual({ type: "meta", aiMode: "mock", source: "mock" });
     const steps = events.filter((e) => e.type === "step");
     expect(steps.length).toBeGreaterThanOrEqual(12); // 6 running + 6 complete
     expect(events.some((e) => e.type === "output")).toBe(true);

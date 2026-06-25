@@ -10,7 +10,7 @@ function delay(ms: number): Promise<void> {
 
 /** Mock execution — uses existing generators, never calls xAI */
 export async function* streamMockExecution(goal: string): AsyncGenerator<ExecuteStreamEvent> {
-  yield { type: "meta", aiMode: "mock" };
+  yield { type: "meta", aiMode: "mock", source: "mock" };
 
   const planned = buildExecutionSteps(goal);
 
@@ -30,6 +30,7 @@ export async function* streamMockExecution(goal: string): AsyncGenerator<Execute
       imageUrl: undefined,
       imageError: undefined,
       aiMode: "mock",
+      source: "mock",
     },
   };
   yield { type: "done" };

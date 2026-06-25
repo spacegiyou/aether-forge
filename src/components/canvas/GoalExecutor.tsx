@@ -13,6 +13,11 @@ import { parseNdjsonBuffer } from "@/lib/execute/parse-stream";
 import { saveSession } from "@/lib/storage/supabase-mock";
 import type { ExecutionStep, ExecutionOutput, AgentType } from "@/lib/generators/goal-processor";
 import type { ExecuteStreamEvent } from "@/lib/ai/stream-events";
+import {
+  sourceBadgeLabel,
+  sourceBadgeVariant,
+  type CredentialSource,
+} from "@/lib/ai/source-badge";
 
 interface GoalExecutorProps {
   goal: string;
@@ -24,7 +29,7 @@ interface GoalExecutorProps {
 function applyStreamEvent(
   event: ExecuteStreamEvent,
   setters: {
-    setAiMode: (m: "mock" | "live") => void;
+    setSource: (s: CredentialSource) => void;
     setSteps: React.Dispatch<React.SetStateAction<ExecutionStep[]>>;
     setActiveAgent: (a: AgentType | null) => void;
     setOutput: (o: ExecutionOutput | null) => void;
@@ -33,7 +38,7 @@ function applyStreamEvent(
 ): boolean {
   switch (event.type) {
     case "meta":
-      setters.setAiMode(event.aiMode);
+      setters.setSource(event.source);
       return false;
     case "step": {
       const step = event.step;
@@ -70,7 +75,7 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
   const [output, setOutput] = useState<ExecutionOutput | null>(null);
   const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [aiMode, setAiMode] = useState<"mock" | "live">("mock");
+  const [source, setSource] = useState<CredentialSource>("mock");
 
   const handleExecute = async () => {
     if (executing) return;
@@ -107,7 +112,7 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
       let outputSummary: string | null = null;
 
       const setters = {
-        setAiMode,
+        setSource,
         setSteps,
         setActiveAgent,
         setOutput: (o: ExecutionOutput | null) => {
@@ -155,8 +160,8 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
           <label htmlFor="goal-input" className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Set your goal
           </label>
-          <Badge variant={aiMode === "live" ? "green" : "default"}>
-            {aiMode === "live" ? "Live" : "Demo"}
+          <Badge variant={sourceBadgeVariant(source)} data-testid="execute-source-badge">
+            {sourceBadgeLabel(source)}
           </Badge>
         </div>
         {error && (
@@ -238,7 +243,7 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
         )}
       </AnimatePresence>
 
-      <OutputPanel output={output} aiMode={aiMode} />
+      <OutputPanel output={output} source={source} />
     </div>
   );
 }

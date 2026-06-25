@@ -1,8 +1,11 @@
 import "server-only";
 
-import { getGrokClient, getFastModel } from "./grok-client";
+import { getGrokClient, getModelForSource } from "./grok-client";
+import { createGrokJsonCompletion } from "./grok-completion";
+import { withCredentialFallback } from "./grok-errors";
 import { grokExecutionSchema } from "./schemas";
 import { generateGrokImage } from "./generate-image";
+import type { XaiCredential } from "./credentials";
 import type { ExecutionOutput, ExecutionStep, AgentType } from "@/lib/generators/goal-processor";
 import type { ExecuteStreamEvent } from "./stream-events";
 
@@ -21,32 +24,35 @@ Agents: researcher, designer, coder, analyst.
 - chartData: honest metric labels (name, value 0-100, agents count)
 - summary: one-paragraph recap`;
 
-/** Single structured Grok call — grok-code-fast-1 returns full execution payload */
-async function fetchGrokExecution(goal: string) {
-  const client = getGrokClient();
-  const completion = await client.chat.completions.create({
-    model: getFastModel(),
-    messages: [
-      { role: "system", content: EXECUTION_SYSTEM },
-      {
-        role: "user",
-        content: `Goal: ${goal}\n\nReturn JSON: { steps: [{agent, message}], code: {language, filename, content}, imagePrompt, thread: [{index, text}], chartData: [{name, value, agents}], summary }`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
+/** Single structured Grok call — model depends on credential source */
+async function fetchGrokExecution(goal: string, initialCred: XaiCredential) {
+  const { result: raw, source } = await withCredentialFallback(
+    initialCred,
+    async (cred, client) => {
+      const model = getModelForSource(cred.source);
+      return createGrokJsonCompletion(client, cred.source, model, [
+        { role: "system", content: EXECUTION_SYSTEM },
+        {
+          role: "user",
+          content: `Goal: ${goal}\n\nReturn JSON: { steps: [{agent, message}], code: {language, filename, content}, imagePrompt, thread: [{index, text}], chartData: [{name, value, agents}], summary }`,
+        },
+      ]);
+    },
+    getGrokClient
+  );
 
-  const raw = completion.choices[0]?.message?.content;
-  if (!raw) throw new Error("Grok returned empty execution");
-  return grokExecutionSchema.parse(JSON.parse(raw));
+  return { execution: grokExecutionSchema.parse(JSON.parse(raw)), source };
 }
 
 /** Live execution — real Grok API calls, server-only */
-export async function* streamLiveExecution(goal: string): AsyncGenerator<ExecuteStreamEvent> {
-  yield { type: "meta", aiMode: "live" };
+export async function* streamLiveExecution(
+  goal: string,
+  credential: XaiCredential
+): AsyncGenerator<ExecuteStreamEvent> {
+  yield { type: "meta", aiMode: "live", source: credential.source };
 
   try {
-    const execution = await fetchGrokExecution(goal);
+    const { execution, source } = await fetchGrokExecution(goal, credential);
 
     for (let i = 0; i < execution.steps.length; i++) {
       const s = execution.steps[i];
@@ -61,23 +67,29 @@ export async function* streamLiveExecution(goal: string): AsyncGenerator<Execute
       yield { type: "step", step: { ...base, status: "complete" } };
     }
 
-    yield { type: "step", step: {
-      id: "step-image",
-      agent: "designer",
-      message: "Generating image via Grok Imagine…",
-      timestamp: Date.now(),
-      status: "running",
-    }};
+    yield {
+      type: "step",
+      step: {
+        id: "step-image",
+        agent: "designer",
+        message: "Generating image via Grok Imagine…",
+        timestamp: Date.now(),
+        status: "running",
+      },
+    };
 
     const imageResult = await generateGrokImage(execution.imagePrompt);
 
-    yield { type: "step", step: {
-      id: "step-image-done",
-      agent: "designer",
-      message: imageResult.url ? "Image generated" : "Image generation skipped",
-      timestamp: Date.now(),
-      status: "complete",
-    }};
+    yield {
+      type: "step",
+      step: {
+        id: "step-image-done",
+        agent: "designer",
+        message: imageResult.url ? "Image generated" : "Image generation skipped",
+        timestamp: Date.now(),
+        status: "complete",
+      },
+    };
 
     const output: ExecutionOutput = {
       code: execution.code,
@@ -89,6 +101,7 @@ export async function* streamLiveExecution(goal: string): AsyncGenerator<Execute
       imageUrl: imageResult.url,
       imageError: imageResult.error,
       aiMode: "live",
+      source,
     };
 
     yield { type: "output", output };

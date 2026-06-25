@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { generateLorem } from "@/lib/generators/lorem-generator";
+import {
+  sourceBadgeLabel,
+  sourceBadgeVariant,
+  isLiveSource,
+  type CredentialSource,
+} from "@/lib/ai/source-badge";
 import { Play, Pause, Volume2, Wand2, Loader2, AlertCircle } from "lucide-react";
 
 export function MultimodalLab() {
@@ -16,7 +22,7 @@ export function MultimodalLab() {
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [imageError, setImageError] = useState<string | undefined>();
   const [imageLoading, setImageLoading] = useState(false);
-  const [imageAiMode, setImageAiMode] = useState<"mock" | "live">("mock");
+  const [imageSource, setImageSource] = useState<CredentialSource>("mock");
 
   const handleGenerate = async () => {
     const p = prompt.trim() || "Cosmic agent swarm visualization";
@@ -34,11 +40,11 @@ export function MultimodalLab() {
         body: JSON.stringify({ prompt: p }),
       });
       const data = (await res.json()) as {
-        aiMode?: "mock" | "live";
+        source?: CredentialSource;
         imageUrl?: string;
         imageError?: string;
       };
-      setImageAiMode(data.aiMode ?? "mock");
+      setImageSource(data.source ?? "mock");
       setImageUrl(data.imageUrl);
       setImageError(data.imageError);
     } catch {
@@ -54,8 +60,8 @@ export function MultimodalLab() {
         <Wand2 className="h-4 w-4 text-violet-400" />
         <span className="text-sm font-semibold">Multimodal Lab</span>
         <Badge variant="violet">Video Demo</Badge>
-        <Badge variant={imageAiMode === "live" && imageUrl ? "green" : "default"}>
-          Image {imageAiMode === "live" && imageUrl ? "Live" : "Demo"}
+        <Badge variant={isLiveSource(imageSource) && imageUrl ? sourceBadgeVariant(imageSource) : "default"}>
+          Image {isLiveSource(imageSource) && imageUrl ? sourceBadgeLabel(imageSource) : "Demo"}
         </Badge>
       </div>
 
@@ -138,7 +144,7 @@ export function MultimodalLab() {
             )}
             {!imageLoading && !imageUrl && !imageError && (
               <div className="flex h-32 items-center justify-center rounded-lg border border-white/10 bg-gradient-to-br from-violet-600/20 to-cyan-600/10">
-                <p className="text-[10px] text-muted-foreground">Demo placeholder — set AI_MODE=live for Grok Imagine</p>
+                <p className="text-[10px] text-muted-foreground">Demo placeholder — run npm run auth:xai or set XAI_API_KEY</p>
               </div>
             )}
           </div>

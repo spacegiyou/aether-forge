@@ -1,15 +1,17 @@
 import "server-only";
 
 import OpenAI from "openai";
-import { requireLiveEnv, getAiEnv } from "./env";
+import { getAiEnv } from "./env";
+import { resolveXaiCredential, type CredentialSource, type XaiCredential } from "./credentials";
 
 /** xAI Grok OpenAI-compatible client — server-only, never import in client components */
-export function getGrokClient(): OpenAI {
-  const env = requireLiveEnv();
-  return new OpenAI({
-    apiKey: env.XAI_API_KEY,
-    baseURL: "https://api.x.ai/v1",
-  });
+export async function getGrokClient(credential?: XaiCredential): Promise<OpenAI> {
+  const cred = credential ?? (await resolveXaiCredential());
+  if (cred.source === "mock" || !cred.token) {
+    throw new Error("No xAI credential");
+  }
+  const baseURL = process.env.XAI_BASE_URL ?? "https://api.x.ai/v1";
+  return new OpenAI({ apiKey: cred.token, baseURL });
 }
 
 export function getTextModel(): string {
@@ -22,4 +24,9 @@ export function getFastModel(): string {
 
 export function getImageModel(): string {
   return getAiEnv().GROK_IMAGE_MODEL;
+}
+
+export function getModelForSource(source: CredentialSource): string {
+  if (source === "oauth") return getTextModel();
+  return getFastModel();
 }

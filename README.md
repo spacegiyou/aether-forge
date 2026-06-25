@@ -14,7 +14,7 @@ Built as proof of **Grok Build** power for sharing on X.
 
 | Feature | Mode | Description |
 |---------|------|-------------|
-| **Goal Execution** | **Real** (with `AI_MODE=live` + `XAI_API_KEY`) / **Demo** (default `AI_MODE=mock`) | Streaming NDJSON via `/api/execute` — Grok plan, code (`grok-code-fast-1`), X thread, chart data, image (`grok-imagine-image-quality`) |
+| **Goal Execution** | **Real** (OAuth or `XAI_API_KEY`) / **Demo** (no creds) | Streaming NDJSON via `/api/execute` — Grok plan, code, X thread, chart data, image (`grok-imagine-image-quality`) |
 | **Generated Code** | **Real** / **Demo** | Runnable TypeScript from Grok when live; deterministic mock otherwise |
 | **X Thread Draft** | **Real** / **Demo** | Grok-authored posts when live (no fake engagement metrics) |
 | **Generated Image** | **Real** / **Demo** | Grok Imagine when live; gradient placeholder when mock |
@@ -27,9 +27,22 @@ Built as proof of **Grok Build** power for sharing on X.
 | **PWA** | **Real** | Installable, offline shell |
 | **Themes** | **Real** | Dark cosmic glassmorphism (default) + light mode |
 
-### Enabling live Grok
+### Run the live demo
 
-Copy `.env.example` → `.env.local`, set `XAI_API_KEY`, and `AI_MODE=live`. Model names are validated at boot — verify at [docs.x.ai](https://docs.x.ai). CI and tests always use `AI_MODE=mock` (no live API calls).
+**Option A — Local OAuth (no API key, unofficial/local-only)**
+
+```bash
+npm run auth:xai          # browser PKCE sign-in (SuperGrok / X Premium+)
+AI_MODE=auto npm run dev  # prefers OAuth token, badge shows "OAuth"
+```
+
+OAuth reuses xAI's browser login (reverse-engineered). It may return HTTP 403 on some tiers — set `XAI_API_KEY` to fall back to the API path. Tokens are stored in `~/.aetherforge/xai-auth.json` (git-ignored).
+
+**Option B — API key (git / Vercel / deploy)**
+
+Copy `.env.example` → `.env.local`, set `XAI_API_KEY`, and `AI_MODE=auto` or `AI_MODE=key`. Badge shows "API key". Model names are validated at boot — verify at [docs.x.ai](https://docs.x.ai).
+
+With neither OAuth nor API key, `AI_MODE=auto` resolves to mock (badge "Demo"). CI and tests need no credentials.
 
 ## 🚀 Quick Start
 

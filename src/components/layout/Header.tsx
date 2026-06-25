@@ -3,6 +3,7 @@
 import { Sparkles, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
+import { GrokAuthControl } from "./GrokAuthControl";
 import { downloadRepo } from "@/lib/export/repo-exporter";
 
 interface HeaderProps {
@@ -27,6 +28,7 @@ export function Header({ goal }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <GrokAuthControl />
         <Button
           variant="glass"
           size="sm"

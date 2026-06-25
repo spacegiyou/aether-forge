@@ -25,6 +25,8 @@ export interface ExecutionOutput {
   imageError?: string;
   /** Source mode for badge display */
   aiMode?: "mock" | "live";
+  /** Resolved credential source for badge display */
+  source?: "oauth" | "key" | "mock";
 }
 
 /** Build the step sequence for goal execution animation */
