@@ -53,21 +53,13 @@ describe("resolveXaiCredential", () => {
     expect(cred).toEqual({ source: "key", token: "xai-key" });
   });
 
-  it("returns mock when AI_MODE=key without XAI_API_KEY (real env path)", async () => {
+  it("returns mock when AI_MODE=key without XAI_API_KEY (defaultDeps + getAiEnv)", async () => {
     process.env.AI_MODE = "key";
     delete process.env.XAI_API_KEY;
     delete process.env.XAI_AUTH_FILE;
     resetAiEnvCache();
 
-    const cred = await resolveXaiCredential({
-      loadOAuth: async () => null,
-      getEnv: () => ({
-        AI_MODE: "key",
-        GROK_TEXT_MODEL: "grok-4.3",
-        GROK_FAST_MODEL: "grok-code-fast-1",
-        GROK_IMAGE_MODEL: "grok-imagine-image-quality",
-      }),
-    });
+    const cred = await resolveXaiCredential();
     expect(cred).toEqual({ source: "mock" });
   });
 

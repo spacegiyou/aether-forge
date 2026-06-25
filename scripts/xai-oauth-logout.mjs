@@ -1,23 +1,16 @@
 #!/usr/bin/env node
 
-import { existsSync, unlinkSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
+import { existsSync } from "fs";
+import { deleteTokenFiles, tokenSearchPaths } from "./xai-oauth-lib.mjs";
 
-const paths = [
-  join(homedir(), ".aetherforge", "xai-auth.json"),
-  join(process.cwd(), ".xai-auth.json"),
-];
+const paths = tokenSearchPaths();
+const existing = paths.filter((p) => existsSync(p));
+const deleted = deleteTokenFiles(paths);
 
-let deleted = false;
-for (const path of paths) {
-  if (existsSync(path)) {
-    unlinkSync(path);
+if (deleted) {
+  for (const path of existing) {
     console.log(`Deleted ${path}`);
-    deleted = true;
   }
-}
-
-if (!deleted) {
+} else {
   console.log("No OAuth token file found.");
 }
