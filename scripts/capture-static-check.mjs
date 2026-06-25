@@ -44,8 +44,8 @@ for (const rel of serverFiles) {
 log("\n=== static-check: UI source badges ===");
 const uiFiles = [
   "src/components/layout/GrokAuthControl.tsx",
-  "src/components/tabs/GoalExecutor.tsx",
-  "src/components/tabs/OutputPanel.tsx",
+  "src/components/canvas/GoalExecutor.tsx",
+  "src/components/canvas/OutputPanel.tsx",
   "src/components/tabs/MultimodalLab.tsx",
 ];
 for (const rel of uiFiles) {
