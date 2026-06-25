@@ -45,8 +45,9 @@ describe("xai-oauth-lib (shipped login code)", () => {
     assert.deepEqual(parseCallbackInput("bare-code"), { code: "bare-code", state: null });
   });
 
-  it("buildAuthorizeUrl uses auth.x.ai authorize + plan=generic", () => {
+  it("buildAuthorizeUrl uses accounts.x.ai authorize + plan=generic", () => {
     const url = buildAuthorizeUrl("state123", "verifier123");
+    assert.ok(url.startsWith("https://accounts.x.ai/oauth2/authorize"));
     assert.ok(url.startsWith(XAI_OAUTH_AUTHORIZE_URL));
     assert.ok(url.includes(`client_id=${XAI_OAUTH_CLIENT_ID}`));
     assert.ok(url.includes("plan=generic"));
