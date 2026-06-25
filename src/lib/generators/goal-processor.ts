@@ -20,6 +20,11 @@ export interface ExecutionOutput {
   thread: XThreadPost[];
   chartData: ChartDataPoint[];
   summary: string;
+  /** Real image URL from Grok Imagine (live mode) */
+  imageUrl?: string;
+  imageError?: string;
+  /** Source mode for badge display */
+  aiMode?: "mock" | "live";
 }
 
 /** Build the step sequence for goal execution animation */

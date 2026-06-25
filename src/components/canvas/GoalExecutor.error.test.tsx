@@ -1,83 +1,57 @@
-/**
- * @vitest-environment jsdom
- */
+/** @vitest-environment jsdom */
+import { useState } from "react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
-import "@testing-library/jest-dom/vitest";
 import { GoalExecutor } from "./GoalExecutor";
-
-vi.mock("@/actions/execute-goal", () => ({
-  executeGoalAction: vi.fn(),
-}));
-
-vi.mock("@/lib/storage/supabase-mock", () => ({
-  saveSession: vi.fn(),
-}));
 
 vi.mock("./FlowCanvas", () => ({
   FlowCanvas: () => <div data-testid="flow-canvas-mock" />,
 }));
 
 vi.mock("./OutputPanel", () => ({
-  OutputPanel: () => <div data-testid="output-panel-mock" />,
+  OutputPanel: () => null,
 }));
 
-vi.mock("framer-motion", () => ({
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div {...props}>{children}</div>
-    ),
-  },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+vi.mock("@/lib/storage/supabase-mock", () => ({
+  saveSession: vi.fn(),
 }));
 
-import { executeGoalAction } from "@/actions/execute-goal";
+function GoalExecutorHarness() {
+  const [goal, setGoal] = useState("");
+  return <GoalExecutor goal={goal} onGoalChange={setGoal} />;
+}
 
-describe("GoalExecutor error UI", () => {
+describe("GoalExecutor error handling", () => {
+  const originalFetch = global.fetch;
+
   beforeEach(() => {
-    vi.mocked(executeGoalAction).mockReset();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: "Goal is required" }),
+      }),
+    );
   });
 
   afterEach(() => {
-    cleanup();
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
   });
 
-  it("renders role=alert for empty goal server error", async () => {
-    vi.mocked(executeGoalAction).mockResolvedValue({
-      error: "Please set a goal before executing.",
-    });
+  it("shows role=alert error when API returns 400", async () => {
+    render(<GoalExecutorHarness />);
 
-    const onGoalChange = vi.fn();
-    render(<GoalExecutor goal="   " onGoalChange={onGoalChange} />);
-
+    fireEvent.change(screen.getByTestId("goal-input"), { target: { value: "test goal" } });
     fireEvent.click(screen.getByTestId("execute-btn"));
 
     await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("goal");
-    });
-  });
-
-  it("renders role=alert when server action returns error", async () => {
-    vi.mocked(executeGoalAction).mockResolvedValue({
-      error: "Goal exceeds maximum length of 2000 characters.",
+      expect(screen.getByTestId("execute-error").textContent).toContain("Goal is required");
     });
 
-    const onGoalChange = vi.fn();
-    render(
-      <GoalExecutor
-        goal="Valid-looking goal text"
-        onGoalChange={onGoalChange}
-      />
-    );
-
-    fireEvent.click(screen.getByTestId("execute-btn"));
-
-    await waitFor(() => {
-      const alert = screen.getByRole("alert");
-      expect(alert).toHaveAttribute("data-testid", "execute-error");
-      expect(alert).toHaveTextContent("2000");
-    });
-
-    expect(executeGoalAction).toHaveBeenCalledWith("Valid-looking goal text");
+    const alert = screen.getByTestId("execute-error");
+    expect(alert.getAttribute("role")).toBe("alert");
+    expect(alert.textContent).toContain("Goal is required");
   });
 });

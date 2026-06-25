@@ -10,19 +10,26 @@ AetherForge is an interactive demonstration of the future of agentic AI tooling.
 
 Built as proof of **Grok Build** power for sharing on X.
 
-## 🎯 Core Features
+## 🎯 Core Features — Real vs Demo
 
-| Feature | Description |
-|---------|-------------|
-| **Agent Sidebar** | 4 draggable agents — Researcher (X sim **Demo**), Designer (Imagine **Demo**), Coder, Analyst |
-| **React Flow Canvas** | Connect agents, collaborate visually |
-| **Goal Execution** | "Set your goal" → animated step logs + 4 output types |
-| **Live Swarm Viz** | Real-time telemetry charts (Recharts) |
-| **Multimodal Lab** | **Demo** — prompt → simulated video player + audio narration |
-| **One-Click Deploy** | **Demo** — Vercel button + README generator |
-| **Viral Kit** | **Demo** — auto X thread + image pack |
-| **PWA** | Installable, offline shell |
-| **Themes** | Dark cosmic glassmorphism (default) + light mode |
+| Feature | Mode | Description |
+|---------|------|-------------|
+| **Goal Execution** | **Real** (with `AI_MODE=live` + `XAI_API_KEY`) / **Demo** (default `AI_MODE=mock`) | Streaming NDJSON via `/api/execute` — Grok plan, code (`grok-code-fast-1`), X thread, chart data, image (`grok-imagine-image-quality`) |
+| **Generated Code** | **Real** / **Demo** | Runnable TypeScript from Grok when live; deterministic mock otherwise |
+| **X Thread Draft** | **Real** / **Demo** | Grok-authored posts when live (no fake engagement metrics) |
+| **Generated Image** | **Real** / **Demo** | Grok Imagine when live; gradient placeholder when mock |
+| **Agent Sidebar** | **Demo** | Draggable agents — Researcher (X sim), Designer (Imagine sim) |
+| **React Flow Canvas** | **Real** | Connect agents, collaborate visually |
+| **Live Swarm Viz** | **Demo** | Simulated telemetry charts (Recharts) |
+| **Multimodal Lab** | **Mixed** | Image: **Real** when live via `/api/generate-image`; video/audio: **Demo** |
+| **One-Click Deploy** | **Demo** | Vercel button + README generator |
+| **Viral Kit** | **Demo** | Auto X thread + image pack |
+| **PWA** | **Real** | Installable, offline shell |
+| **Themes** | **Real** | Dark cosmic glassmorphism (default) + light mode |
+
+### Enabling live Grok
+
+Copy `.env.example` → `.env.local`, set `XAI_API_KEY`, and `AI_MODE=live`. Model names are validated at boot — verify at [docs.x.ai](https://docs.x.ai). CI and tests always use `AI_MODE=mock` (no live API calls).
 
 ## 🚀 Quick Start
 
@@ -35,7 +42,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## 🛠 Stack
 
-- **Next.js 16** — App Router + Server Actions
+- **Next.js 16** — App Router + streaming Route Handlers
 - **TypeScript** — Strict typing throughout
 - **Tailwind CSS v4** — Cosmic glassmorphism theme
 - **shadcn/ui** — Accessible component primitives
@@ -76,7 +83,8 @@ npm test
 
 ```
 src/
-├── actions/          # Server Actions (goal execution)
+├── app/api/          # Streaming execute + image generation (server-only)
+├── actions/          # Legacy mock action (tests)
 ├── components/
 │   ├── canvas/       # React Flow + goal executor
 │   ├── layout/       # Header, particles, theme
@@ -84,7 +92,8 @@ src/
 │   ├── tabs/         # 4 feature tabs
 │   └── ui/           # shadcn primitives
 └── lib/
-    ├── generators/   # Pure mock output functions
+    ├── ai/           # Grok client, env validation, live/mock routers
+    ├── generators/   # Mock output functions (AI_MODE=mock)
     ├── storage/      # Supabase mock (localStorage)
     └── export/       # Repo zip exporter
 ```

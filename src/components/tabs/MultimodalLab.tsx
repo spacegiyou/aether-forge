@@ -6,19 +6,46 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { generateLorem } from "@/lib/generators/lorem-generator";
-import { Play, Pause, Volume2, Wand2 } from "lucide-react";
+import { Play, Pause, Volume2, Wand2, Loader2, AlertCircle } from "lucide-react";
 
 export function MultimodalLab() {
   const [prompt, setPrompt] = useState("");
   const [playing, setPlaying] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [audioNote, setAudioNote] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | undefined>();
+  const [imageError, setImageError] = useState<string | undefined>();
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageAiMode, setImageAiMode] = useState<"mock" | "live">("mock");
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     const p = prompt.trim() || "Cosmic agent swarm visualization";
     setGenerated(true);
     setPlaying(true);
     setAudioNote(generateLorem(p + "-audio", 16));
+    setImageUrl(undefined);
+    setImageError(undefined);
+    setImageLoading(true);
+
+    try {
+      const res = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: p }),
+      });
+      const data = (await res.json()) as {
+        aiMode?: "mock" | "live";
+        imageUrl?: string;
+        imageError?: string;
+      };
+      setImageAiMode(data.aiMode ?? "mock");
+      setImageUrl(data.imageUrl);
+      setImageError(data.imageError);
+    } catch {
+      setImageError("Image request failed");
+    } finally {
+      setImageLoading(false);
+    }
   };
 
   return (
@@ -26,7 +53,10 @@ export function MultimodalLab() {
       <div className="flex items-center gap-2">
         <Wand2 className="h-4 w-4 text-violet-400" />
         <span className="text-sm font-semibold">Multimodal Lab</span>
-        <Badge variant="violet">Simulated</Badge>
+        <Badge variant="violet">Video Demo</Badge>
+        <Badge variant={imageAiMode === "live" && imageUrl ? "green" : "default"}>
+          Image {imageAiMode === "live" && imageUrl ? "Live" : "Demo"}
+        </Badge>
       </div>
 
       <Textarea
@@ -48,7 +78,7 @@ export function MultimodalLab() {
           animate={{ opacity: 1, scale: 1 }}
           className="space-y-3"
         >
-          {/* Fake video player */}
+          {/* Fake video player — kept as Demo */}
           <div
             className="relative aspect-video overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-slate-900 via-violet-950 to-cyan-950"
             data-testid="fake-video-player"
@@ -64,7 +94,7 @@ export function MultimodalLab() {
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                <p className="text-sm font-semibold text-white/80">AetherForge Video</p>
+                <p className="text-sm font-semibold text-white/80">AetherForge Video (Demo)</p>
                 <p className="text-[10px] text-white/50 mt-1">{prompt.slice(0, 60)}…</p>
               </motion.div>
             </div>
@@ -83,12 +113,41 @@ export function MultimodalLab() {
             </div>
           </div>
 
-          {/* Audio note */}
+          {/* Real / placeholder image from Grok Imagine */}
+          <div className="glass-panel rounded-xl p-3" data-testid="multimodal-image">
+            <p className="mb-2 text-xs font-semibold">Generated Image</p>
+            {imageLoading && (
+              <div className="flex h-32 items-center justify-center" data-testid="multimodal-image-loading">
+                <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+              </div>
+            )}
+            {!imageLoading && imageError && (
+              <div className="flex items-center gap-2 text-[11px] text-red-300" data-testid="multimodal-image-error">
+                <AlertCircle className="h-4 w-4" />
+                {imageError}
+              </div>
+            )}
+            {!imageLoading && imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imageUrl}
+                alt={prompt}
+                className="h-32 w-full rounded-lg object-cover"
+                data-testid="multimodal-image-real"
+              />
+            )}
+            {!imageLoading && !imageUrl && !imageError && (
+              <div className="flex h-32 items-center justify-center rounded-lg border border-white/10 bg-gradient-to-br from-violet-600/20 to-cyan-600/10">
+                <p className="text-[10px] text-muted-foreground">Demo placeholder — set AI_MODE=live for Grok Imagine</p>
+              </div>
+            )}
+          </div>
+
           <div className="glass-panel rounded-xl p-3" data-testid="audio-note">
             <div className="flex items-center gap-2 mb-2">
               <Volume2 className="h-4 w-4 text-cyan-400" />
               <span className="text-xs font-semibold">Audio Narration</span>
-              <Badge variant="default">AI Voice</Badge>
+              <Badge variant="default">Demo</Badge>
             </div>
             <p className="text-[11px] leading-relaxed text-muted-foreground italic">
               &ldquo;{audioNote}&rdquo;

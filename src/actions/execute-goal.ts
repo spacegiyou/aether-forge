@@ -3,7 +3,10 @@
 import { buildExecutionSteps, processGoal } from "@/lib/generators/goal-processor";
 import { validateGoal } from "@/lib/execute/goal-validation";
 
-/** Server Action — processes goal and returns mock swarm outputs */
+/**
+ * Legacy server action — always uses mock generators (AI_MODE=mock path).
+ * GoalExecutor uses /api/execute streaming; this remains for unit tests.
+ */
 export async function executeGoalAction(goal: string) {
   const validation = validateGoal(goal);
   if (!validation.ok) {
@@ -11,9 +14,6 @@ export async function executeGoalAction(goal: string) {
   }
 
   const { trimmed } = validation;
-
-  // Simulate server-side processing delay
-  await new Promise((r) => setTimeout(r, 400));
 
   return {
     steps: buildExecutionSteps(trimmed),

@@ -51,11 +51,12 @@ describe("chart-generator", () => {
 });
 
 describe("thread-generator", () => {
-  it("generateXThread includes goal in first post", () => {
+  it("generateXThread includes goal in first post without engagement fields", () => {
     const goal = "Grok Build demo";
     const thread = generateXThread(goal);
     expect(thread[0].text).toContain("AetherForge");
-    expect(thread.every((p) => p.engagement > 0)).toBe(true);
+    expect(thread.every((p) => "engagement" in p === false)).toBe(true);
+    expect(thread.length).toBeGreaterThanOrEqual(3);
   });
 });
 

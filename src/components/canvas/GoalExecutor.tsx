@@ -9,11 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FlowCanvas } from "./FlowCanvas";
 import { OutputPanel } from "./OutputPanel";
-import { executeGoalAction } from "@/actions/execute-goal";
-import { extractExecuteError } from "@/lib/execute/goal-validation";
+import { parseNdjsonBuffer } from "@/lib/execute/parse-stream";
 import { saveSession } from "@/lib/storage/supabase-mock";
 import type { ExecutionStep, ExecutionOutput, AgentType } from "@/lib/generators/goal-processor";
-import { sleep } from "@/lib/utils";
+import type { ExecuteStreamEvent } from "@/lib/ai/stream-events";
 
 interface GoalExecutorProps {
   goal: string;
@@ -22,12 +21,56 @@ interface GoalExecutorProps {
   addAgentRequest?: { type: AgentType; key: number } | null;
 }
 
+function applyStreamEvent(
+  event: ExecuteStreamEvent,
+  setters: {
+    setAiMode: (m: "mock" | "live") => void;
+    setSteps: React.Dispatch<React.SetStateAction<ExecutionStep[]>>;
+    setActiveAgent: (a: AgentType | null) => void;
+    setOutput: (o: ExecutionOutput | null) => void;
+    setError: (e: string | null) => void;
+  }
+): boolean {
+  switch (event.type) {
+    case "meta":
+      setters.setAiMode(event.aiMode);
+      return false;
+    case "step": {
+      const step = event.step;
+      setters.setActiveAgent(step.status === "running" ? step.agent : null);
+      setters.setSteps((prev) => {
+        const existing = prev.findIndex((s) => s.id === step.id);
+        if (existing >= 0) {
+          const next = [...prev];
+          next[existing] = step;
+          return next;
+        }
+        return [...prev, step];
+      });
+      return false;
+    }
+    case "output":
+      setters.setOutput(event.output);
+      setters.setActiveAgent(null);
+      return false;
+    case "error":
+      setters.setError(event.error);
+      return true;
+    case "done":
+      setters.setActiveAgent(null);
+      return true;
+    default:
+      return false;
+  }
+}
+
 export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentRequest }: GoalExecutorProps) {
   const [executing, setExecuting] = useState(false);
   const [steps, setSteps] = useState<ExecutionStep[]>([]);
   const [output, setOutput] = useState<ExecutionOutput | null>(null);
   const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [aiMode, setAiMode] = useState<"mock" | "live">("mock");
 
   const handleExecute = async () => {
     if (executing) return;
@@ -38,61 +81,84 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
     setError(null);
 
     try {
-    const result = await executeGoalAction(goal);
-    const actionError = extractExecuteError(result);
-    if (actionError) {
-      setError(actionError);
-      setExecuting(false);
-      return;
-    }
+      const res = await fetch("/api/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal }),
+      });
 
-    const { steps: planned, output: out } = result as {
-      steps: ExecutionStep[];
-      output: ExecutionOutput;
-      executedAt: string;
-    };
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error ?? `Request failed (${res.status})`);
+        setExecuting(false);
+        return;
+      }
 
-    // Animate steps sequentially
-    for (let i = 0; i < planned.length; i++) {
-      const step = planned[i];
-      setActiveAgent(step.agent);
-      setSteps((prev) => [
-        ...prev.map((s) => ({ ...s, status: "complete" as const })),
-        { ...step, status: "running" },
-      ]);
-      await sleep(600);
-      setSteps((prev) =>
-        prev.map((s, idx) =>
-          idx === prev.length - 1 ? { ...s, status: "complete" } : s
-        )
-      );
-    }
+      const reader = res.body?.getReader();
+      if (!reader) {
+        setError("No response stream");
+        setExecuting(false);
+        return;
+      }
 
-    setActiveAgent(null);
-    setOutput(out);
-    saveSession({
-      id: `session-${Date.now()}`,
-      goal,
-      createdAt: new Date().toISOString(),
-      outputs: { summary: out.summary },
-    });
-    setExecuting(false);
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finished = false;
+      let outputSummary: string | null = null;
+
+      const setters = {
+        setAiMode,
+        setSteps,
+        setActiveAgent,
+        setOutput: (o: ExecutionOutput | null) => {
+          setOutput(o);
+          if (o) outputSummary = o.summary;
+        },
+        setError,
+      };
+
+      while (!finished) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const { events, remainder } = parseNdjsonBuffer(buffer);
+        buffer = remainder;
+
+        for (const event of events) {
+          finished = applyStreamEvent(event, setters);
+          if (finished) break;
+        }
+      }
+
+      if (outputSummary) {
+        saveSession({
+          id: `session-${Date.now()}`,
+          goal,
+          createdAt: new Date().toISOString(),
+          outputs: { summary: outputSummary },
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Execution failed unexpectedly.");
+    } finally {
       setExecuting(false);
     }
   };
 
   return (
     <div className="flex h-full flex-col gap-3 p-3 md:p-4">
-      {/* Goal input */}
       <motion.div
         className="glass-panel rounded-xl border border-white/10 p-4"
         animate={executing ? { boxShadow: "0 0 30px rgba(34,211,238,0.2)" } : {}}
       >
-        <label htmlFor="goal-input" className="mb-2 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Set your goal
-        </label>
+        <div className="mb-2 flex items-center gap-2">
+          <label htmlFor="goal-input" className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Set your goal
+          </label>
+          <Badge variant={aiMode === "live" ? "green" : "default"}>
+            {aiMode === "live" ? "Live" : "Demo"}
+          </Badge>
+        </div>
         {error && (
           <div
             role="alert"
@@ -129,7 +195,6 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
         </div>
       </motion.div>
 
-      {/* Canvas */}
       <div className="min-h-[240px] flex-1">
         <FlowCanvas
           executing={executing}
@@ -139,7 +204,6 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
         />
       </div>
 
-      {/* Step logs */}
       <AnimatePresence>
         {steps.length > 0 && (
           <motion.div
@@ -174,7 +238,7 @@ export function GoalExecutor({ goal, onGoalChange, draggingAgent, addAgentReques
         )}
       </AnimatePresence>
 
-      <OutputPanel output={output} />
+      <OutputPanel output={output} aiMode={aiMode} />
     </div>
   );
 }

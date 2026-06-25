@@ -3,10 +3,9 @@ import { generateLorem } from "./lorem-generator";
 export interface XThreadPost {
   index: number;
   text: string;
-  engagement: number;
 }
 
-/** Generate a mock X (Twitter) thread from a goal */
+/** Generate a mock X (Twitter) thread from a goal — text only, no engagement metrics */
 export function generateXThread(goal: string): XThreadPost[] {
   const hook = `🚀 Just forged something wild with AetherForge: "${goal.slice(0, 80)}${goal.length > 80 ? "…" : ""}"`;
   const threads = [
@@ -19,6 +18,5 @@ export function generateXThread(goal: string): XThreadPost[] {
   return threads.map((text, index) => ({
     index: index + 1,
     text,
-    engagement: 120 + (goal.length * 3) + index * 47,
   }));
 }

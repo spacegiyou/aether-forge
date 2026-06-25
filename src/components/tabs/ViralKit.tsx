@@ -70,10 +70,7 @@ export function ViralKit() {
             {thread.map((post) => (
               <div key={post.index} className="glass-panel rounded-lg p-3 text-[12px] leading-relaxed">
                 <span className="font-bold text-cyan-400">{post.index}/</span> {post.text}
-                <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground">
-                  <span>♥ {post.engagement}</span>
-                  <span>↻ {Math.floor(post.engagement / 3)}</span>
-                </div>
+
               </div>
             ))}
           </div>

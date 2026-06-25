@@ -35,7 +35,7 @@ export function LiveSwarmViz() {
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-cyan-400 animate-pulse" />
           <span className="text-sm font-semibold">Live Swarm Telemetry</span>
-          <Badge variant="green">LIVE</Badge>
+          <Badge variant="default">Demo</Badge>
         </div>
         <Button variant="glass" size="sm" onClick={() => setData(generateChartData(`refresh-${Date.now()}`))}>
           <RefreshCw className="h-3 w-3" />
