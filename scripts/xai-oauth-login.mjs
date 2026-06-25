@@ -44,8 +44,10 @@ function pkceChallenge(verifier) {
 }
 
 function tokenPath() {
-  const home = join(homedir(), ".aetherforge", "xai-auth.json");
-  return home;
+  if (process.env.XAI_AUTH_FILE?.trim()) {
+    return process.env.XAI_AUTH_FILE.trim();
+  }
+  return join(homedir(), ".aetherforge", "xai-auth.json");
 }
 
 function saveTokens(body) {

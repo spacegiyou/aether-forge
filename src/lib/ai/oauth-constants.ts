@@ -1,4 +1,7 @@
-/** xAI OAuth constants — verified from NousResearch/hermes-agent hermes_cli/auth.py + auth.x.ai discovery */
+/**
+ * xAI OAuth constants — verified from NousResearch/hermes-agent hermes_cli/auth.py.
+ * User-facing login is accounts.x.ai; OIDC discovery lives at auth.x.ai (accounts.x.ai discovery 404s).
+ */
 export const XAI_OAUTH_ISSUER = "https://auth.x.ai";
 export const XAI_OAUTH_AUTHORIZE_URL = `${XAI_OAUTH_ISSUER}/oauth2/authorize`;
 export const XAI_OAUTH_TOKEN_URL = `${XAI_OAUTH_ISSUER}/oauth2/token`;

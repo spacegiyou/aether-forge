@@ -53,7 +53,12 @@ describe("resolveXaiCredential", () => {
     expect(cred).toEqual({ source: "key", token: "xai-key" });
   });
 
-  it("returns mock when AI_MODE=key without XAI_API_KEY", async () => {
+  it("returns mock when AI_MODE=key without XAI_API_KEY (real env path)", async () => {
+    process.env.AI_MODE = "key";
+    delete process.env.XAI_API_KEY;
+    delete process.env.XAI_AUTH_FILE;
+    resetAiEnvCache();
+
     const cred = await resolveXaiCredential({
       loadOAuth: async () => null,
       getEnv: () => ({

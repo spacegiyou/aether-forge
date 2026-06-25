@@ -38,9 +38,10 @@ describe("ai env", () => {
     expect(env.GROK_IMAGE_MODEL).toBe("grok-imagine-image-quality");
   });
 
-  it("validateAiEnvAtBoot runs eager Zod parse and rejects key mode without key", () => {
+  it("validateAiEnvAtBoot allows key mode without key (resolver falls back to mock)", () => {
     process.env.AI_MODE = "key";
     delete process.env.XAI_API_KEY;
-    expect(() => validateAiEnvAtBoot()).toThrow("XAI_API_KEY");
+    expect(() => validateAiEnvAtBoot()).not.toThrow();
+    expect(getAiEnv().AI_MODE).toBe("key");
   });
 });

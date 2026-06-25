@@ -31,9 +31,6 @@ let cached: AiEnv = parseAiEnv();
 /** Eager Zod validation at server boot — also runs on module load */
 export function validateAiEnvAtBoot(): AiEnv {
   cached = parseAiEnv();
-  if (cached.AI_MODE === "key" && !cached.XAI_API_KEY) {
-    throw new Error("XAI_API_KEY is required when AI_MODE=key");
-  }
   return cached;
 }
 

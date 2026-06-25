@@ -20,6 +20,11 @@ export type TokenFetcher = (url: string, init: RequestInit) => Promise<Response>
 
 const DEFAULT_FETCHER: TokenFetcher = (url, init) => fetch(url, init);
 
+function envTokenPath(): string | null {
+  const override = process.env.XAI_AUTH_FILE?.trim();
+  return override || null;
+}
+
 function homeTokenPath(): string {
   return join(homedir(), ".aetherforge", "xai-auth.json");
 }
@@ -28,17 +33,23 @@ function localTokenPath(): string {
   return join(process.cwd(), ".xai-auth.json");
 }
 
+function tokenSearchPaths(): string[] {
+  const envPath = envTokenPath();
+  if (envPath) return [envPath];
+  return [homeTokenPath(), localTokenPath()];
+}
+
 /** Resolve token file path — prefer ~/.aetherforge, else project-local */
 export function getOAuthTokenPath(): string {
-  const home = homeTokenPath();
-  if (existsSync(home)) return home;
-  const local = localTokenPath();
-  if (existsSync(local)) return local;
-  return home;
+  const paths = tokenSearchPaths();
+  for (const path of paths) {
+    if (existsSync(path)) return path;
+  }
+  return paths[0];
 }
 
 export function loadOAuthToken(): OAuthTokenData | null {
-  const paths = [homeTokenPath(), localTokenPath()];
+  const paths = tokenSearchPaths();
   for (const path of paths) {
     if (!existsSync(path)) continue;
     try {
@@ -65,9 +76,9 @@ export function saveOAuthToken(data: OAuthTokenData, targetPath?: string): void 
   renameSync(tmp, path);
 }
 
-export function deleteOAuthToken(): boolean {
+export function deleteOAuthToken(paths: string[] = tokenSearchPaths()): boolean {
   let deleted = false;
-  for (const path of [homeTokenPath(), localTokenPath()]) {
+  for (const path of paths) {
     if (existsSync(path)) {
       unlinkSync(path);
       deleted = true;
@@ -94,10 +105,23 @@ function tokenDataFromResponse(
   };
 }
 
+export interface RefreshOptions {
+  fetcher?: TokenFetcher;
+  tokenPath?: string;
+  deleteToken?: (paths?: string[]) => boolean;
+  saveToken?: (data: OAuthTokenData, targetPath?: string) => void;
+}
+
 export async function refreshOAuthToken(
   data: OAuthTokenData,
-  fetcher: TokenFetcher = DEFAULT_FETCHER
+  options: RefreshOptions | TokenFetcher = {}
 ): Promise<OAuthTokenData> {
+  const opts: RefreshOptions =
+    typeof options === "function" ? { fetcher: options } : options;
+  const fetcher = opts.fetcher ?? DEFAULT_FETCHER;
+  const deleteToken = opts.deleteToken ?? deleteOAuthToken;
+  const saveToken = opts.saveToken ?? saveOAuthToken;
+  const targetPath = opts.tokenPath ?? getOAuthTokenPath();
   const res = await fetcher(XAI_OAUTH_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -118,7 +142,7 @@ export async function refreshOAuthToken(
 
   if (!res.ok) {
     if (body.error === "invalid_grant") {
-      deleteOAuthToken();
+      deleteToken([targetPath]);
       throw new Error("re-auth required");
     }
     throw new Error(body.error_description ?? body.error ?? `Token refresh failed (${res.status})`);
@@ -136,7 +160,7 @@ export async function refreshOAuthToken(
     },
     data
   );
-  saveOAuthToken(refreshed);
+  saveToken(refreshed, targetPath);
   return refreshed;
 }
 
