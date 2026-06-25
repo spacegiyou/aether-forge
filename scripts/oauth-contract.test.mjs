@@ -73,6 +73,8 @@ describe("oauth-contract", () => {
     assert.ok(lines.some((l) => l.includes("accounts discovery status: 404")));
     assert.ok(lines.some((l) => l.includes("accounts authorize GET (browser UI):")));
     assert.ok(lines.some((l) => l.includes("accounts token HEAD:")));
+    assert.ok(lines.some((l) => l.includes("accounts token POST (invalid code):")));
+    assert.ok(lines.some((l) => l.includes("verified_against_accounts:")));
     assert.ok(lines.some((l) => l.includes("browser_authorize:")));
     assert.ok(lines.some((l) => l.includes("auth discovery status: 200")));
     assert.equal(discovery.authorization_endpoint, AUTHORIZE_URL);

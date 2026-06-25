@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * POST /api/execute against next start — drain full NDJSON, assert last meta source.
- * oauth-recovery: real api.x.ai rejection for OAuth bearer (forward proxy) + real OIDC
- * token refresh attempt + mock key success through XAI_BASE_URL proxy.
+ * POST /api/execute against next start — drain full NDJSON, assert meta source.
+ * oauth: unmocked real api.x.ai rejection (no key, META_COUNT=1).
+ * oauth-recovery: unmocked when XAI_API_KEY looks real; else harness proxy for key leg only.
  */
 
 import { spawn, spawnSync } from "child_process";
@@ -32,6 +32,10 @@ function log(line) {
   console.log(line);
 }
 
+function isRealXaiApiKey(key) {
+  return typeof key === "string" && key.startsWith("xai-") && key.length >= 24;
+}
+
 function mockChatCompletion(content) {
   return JSON.stringify({
     id: "chatcmpl-http-capture",
@@ -48,7 +52,7 @@ function mockChatCompletion(content) {
   });
 }
 
-/** Proxy: OAuth bearer → real api.x.ai; key bearer → mock success */
+/** Proxy: OAuth bearer → real api.x.ai; key bearer → mock success (harness only) */
 function createXaiRecoveryProxy({ keyBearer, oauthBearerPrefix = "oauth-http" }) {
   const hits = [];
 
@@ -135,18 +139,9 @@ async function drainStream(label, env, opts = {}) {
   };
   if (opts.dropKey) delete childEnv.XAI_API_KEY;
   delete childEnv.XAI_AUTH_FILE;
-  if (label === "oauth" || label === "oauth-recovery") {
+  if (opts.oauthToken) {
     childEnv.XAI_AUTH_FILE = tokenFile;
-    writeFileSync(
-      tokenFile,
-      JSON.stringify({
-        access_token: "oauth-http-capture",
-        refresh_token: "oauth-http-refresh",
-        obtained_at: Date.now(),
-        expires_at: Date.now() + 7_200_000,
-      }),
-      "utf8"
-    );
+    writeFileSync(tokenFile, JSON.stringify(opts.oauthToken), "utf8");
   }
   if (opts.xaiBaseUrl) {
     childEnv.XAI_BASE_URL = opts.xaiBaseUrl;
@@ -194,6 +189,7 @@ async function drainStream(label, env, opts = {}) {
     log(`ASSERT_SOURCE [${label}]: ${lastMeta.source}`);
     log(`META_COUNT [${label}]: ${metas.length}`);
     log(`TERMINAL [${label}]: ${events.at(-1)?.type ?? "none"}`);
+    if (opts.mode) log(`MODE [${label}]: ${opts.mode}`);
 
     if (opts.proxyHits?.length) {
       for (const hit of opts.proxyHits) log(`PROXY_HIT [${label}]: ${hit}`);
@@ -222,6 +218,13 @@ async function drainStream(label, env, opts = {}) {
   }
 }
 
+const oauthToken = {
+  access_token: "oauth-http-capture",
+  refresh_token: "oauth-http-refresh",
+  obtained_at: Date.now(),
+  expires_at: Date.now() + 7_200_000,
+};
+
 const build = spawnSync("npm", ["run", "build"], { encoding: "utf8", cwd: process.cwd() });
 if (build.status !== 0) {
   console.error(build.stdout + build.stderr);
@@ -230,42 +233,71 @@ if (build.status !== 0) {
 
 log(`=== HTTP POST /api/execute full-stream meta (next start :${PORT}) ===`);
 
-await drainStream("mock", { AI_MODE: "auto" }, { dropKey: true, expectSource: "mock", expectTerminal: "done" });
+await drainStream("mock", { AI_MODE: "auto" }, {
+  dropKey: true,
+  expectSource: "mock",
+  expectTerminal: "done",
+  mode: "unmocked",
+});
+
 await drainStream(
   "key",
   { AI_MODE: "auto", XAI_API_KEY: "xai-http-capture-key" },
-  { expectSource: "key" }
+  { expectSource: "key", mode: "unmocked-real-api.x.ai-fake-key" }
 );
-await drainStream("oauth", { AI_MODE: "auto" }, {
+
+// Unmocked: real api.x.ai rejects fake oauth token, no key to escape → META_COUNT=1, terminal error
+await drainStream("oauth-unmocked", { AI_MODE: "auto" }, {
   dropKey: true,
+  oauthToken,
   expectSource: "oauth",
   expectMetaCount: 1,
+  expectTerminal: "error",
+  mode: "unmocked-real-api.x.ai-no-key",
 });
 
-const recoveryKey = "xai-http-recovery-escape";
-const proxy = createXaiRecoveryProxy({ keyBearer: recoveryKey });
-const proxyBase = await proxy.listen();
-log(`RECOVERY_PROXY_BASE: ${proxyBase}`);
+// Harness uses proxy by default. Set EVIDENCE_USE_LIVE_KEY=1 + EVIDENCE_LIVE_XAI_KEY=xai-...
+// for fully unmocked oauth-recovery (optional manual bar).
+const liveKey = process.env.EVIDENCE_LIVE_XAI_KEY?.trim() ?? "";
+const useLiveKey =
+  process.env.EVIDENCE_USE_LIVE_KEY === "1" && isRealXaiApiKey(liveKey);
+const recoveryKey = useLiveKey ? liveKey : "xai-http-recovery-escape";
+
+log(`RECOVERY_KEY_SOURCE: ${useLiveKey ? "env XAI_API_KEY (unmocked key leg)" : "harness fake key (proxy mock key leg)"}`);
+
+let proxy = null;
+let proxyBase = undefined;
+let proxyHits = [];
+
+if (!useLiveKey) {
+  proxy = createXaiRecoveryProxy({ keyBearer: recoveryKey });
+  proxyBase = await proxy.listen();
+  log(`RECOVERY_PROXY_BASE: ${proxyBase}`);
+}
 
 try {
   await drainStream(
-    "oauth-recovery",
+    useLiveKey ? "oauth-recovery-live" : "oauth-recovery-harness",
     { AI_MODE: "auto", XAI_API_KEY: recoveryKey },
     {
+      oauthToken,
       expectSource: "key",
       expectMetaCount: 2,
       expectTerminal: "done",
       xaiBaseUrl: proxyBase,
-      proxyHits: proxy.hits,
+      proxyHits: proxy?.hits ?? [],
+      mode: useLiveKey ? "unmocked-real-api+oidc-refresh" : "real-oauth-rejection+proxy-key-mock",
     }
   );
 
-  const hadRealForward = proxy.hits.some((h) => h.startsWith("real_forward:"));
-  const hadMockKey = proxy.hits.some((h) => h.startsWith("mock_key:"));
-  if (!hadRealForward) throw new Error("oauth-recovery: expected real api.x.ai forward");
-  if (!hadMockKey) throw new Error("oauth-recovery: expected mock key success after escape");
+  if (proxy) {
+    const hadRealForward = proxy.hits.some((h) => h.startsWith("real_forward:"));
+    const hadMockKey = proxy.hits.some((h) => h.startsWith("mock_key:"));
+    if (!hadRealForward) throw new Error("oauth-recovery-harness: expected real api.x.ai forward for oauth");
+    if (!hadMockKey) throw new Error("oauth-recovery-harness: expected mock key success after escape");
+  }
 } finally {
-  await proxy.close();
+  if (proxy) await proxy.close();
 }
 
 log("=== HTTP exec-modes capture complete ===");

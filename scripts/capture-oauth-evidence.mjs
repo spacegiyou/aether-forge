@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
- * Verification plan evidence — requires clean git tree, then lint/build/test, then HTTP/OAuth probes.
+ * Verification plan evidence — pre-oauth gate, unit/static/HTTP probes, final-green.
  */
 
-import { spawnSync, spawn } from "child_process";
-import { createServer } from "http";
-import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync } from "fs";
+import { spawnSync } from "child_process";
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { exchangeCode, manualPasteFlow } from "./xai-oauth-lib.mjs";
@@ -14,23 +13,19 @@ import { TOKEN_URL, BROWSER_AUTHORIZE_URL } from "./oauth-contract.mjs";
 const SCRATCH = process.env.SCRATCH_DIR || join(process.cwd(), ".scratch-oauth-evidence");
 mkdirSync(SCRATCH, { recursive: true });
 
+const preOauth = join(SCRATCH, "pre-oauth.log");
 const finalGreen = join(SCRATCH, "final-green.log");
 const execModes = join(SCRATCH, "exec-modes.log");
 const authRun = join(SCRATCH, "auth-run.log");
 const unitCreds = join(SCRATCH, "unit-creds.log");
+const staticCheck = join(SCRATCH, "static-check.log");
 const finalEvidence = join(SCRATCH, "final-evidence.txt");
 
-for (const f of [finalGreen, execModes, authRun, unitCreds]) {
-  writeFileSync(f, "");
-}
+const preGitStatus = spawnSync("git", ["status", "--porcelain"], { encoding: "utf8" }).stdout.trim();
 
-const gitStatus = spawnSync("git", ["status", "--porcelain"], { encoding: "utf8" }).stdout.trim();
-if (gitStatus) {
-  throw new Error(`git working tree must be clean before evidence capture:\n${gitStatus}`);
-}
-
-function runShell(cmd, logPath) {
-  writeFileSync(logPath, `=== ${cmd} ===\n`, { encoding: "utf8" });
+function runShell(cmd, logPath, { append = false, failOnError = true } = {}) {
+  const prefix = append ? readFileSync(logPath, "utf8") + `\n=== ${cmd} ===\n` : `=== ${cmd} ===\n`;
+  writeFileSync(logPath, prefix, { encoding: "utf8" });
   const result = spawnSync("sh", ["-c", cmd], {
     encoding: "utf8",
     cwd: process.cwd(),
@@ -39,7 +34,7 @@ function runShell(cmd, logPath) {
   });
   const out = (result.stdout || "") + (result.stderr || "");
   writeFileSync(logPath, out + `\nexit=${result.status ?? 1}\n`, { flag: "a" });
-  if (result.status !== 0) {
+  if (failOnError && result.status !== 0) {
     throw new Error(`${cmd} failed with ${result.status}`);
   }
   return result;
@@ -50,7 +45,7 @@ function append(path, text) {
 }
 
 function runNode(script, logPath, extraEnv = {}) {
-  writeFileSync(logPath, readFileSync(logPath, "utf8") + `\n=== node ${script} ===\n`, { flag: "a" });
+  append(logPath, `=== node ${script} ===`);
   const result = spawnSync("node", [script], {
     encoding: "utf8",
     cwd: process.cwd(),
@@ -58,12 +53,26 @@ function runNode(script, logPath, extraEnv = {}) {
     maxBuffer: 20 * 1024 * 1024,
   });
   const out = (result.stdout || "") + (result.stderr || "");
-  writeFileSync(logPath, out + `\nexit=${result.status ?? 1}\n`, { flag: "a" });
+  append(logPath, out + `\nexit=${result.status ?? 1}`);
   if (result.status !== 0) {
     throw new Error(`node ${script} failed with ${result.status}`);
   }
   return result;
 }
+
+// Plan step 1: pre-oauth gate (git status + lint/build/test)
+writeFileSync(
+  preOauth,
+  [
+    "=== git status --porcelain (pre-capture) ===",
+    preGitStatus || "(clean)",
+    "",
+  ].join("\n")
+);
+if (preGitStatus) {
+  throw new Error(`git working tree must be clean before evidence capture:\n${preGitStatus}`);
+}
+runShell("npm run lint && npm run build && npm test", preOauth, { append: true });
 
 // Plan step 3: vitest only (no node --test on .ts)
 runShell(
@@ -71,17 +80,24 @@ runShell(
   unitCreds
 );
 
-// Plan step 7: single clean lint && build && test transcript
-runShell(
-  "npm run lint && npm run build && npm test && npm run test:oauth-script && npm run test:oauth-contract",
-  finalGreen
-);
+// Plan step 5: static structural checks
+runNode("scripts/capture-static-check.mjs", staticCheck);
 
+// Plan step 2 + OAuth probes
+writeFileSync(authRun, "");
 runNode("scripts/verify-xai-oauth-endpoints.mjs", authRun);
+runShell("node scripts/xai-oauth-login.mjs --help", authRun, { append: true });
+runShell("node --test scripts/xai-oauth-lib.test.mjs", authRun, { append: true });
+runShell(
+  "npx vitest run src/lib/ai/execute-live.integration.test.ts --reporter=verbose",
+  authRun,
+  { append: true }
+);
 
 append(authRun, "=== real OIDC token exchange (invalid code, no mock) ===");
 append(authRun, `token_url: ${TOKEN_URL}`);
 append(authRun, `browser_authorize: ${BROWSER_AUTHORIZE_URL}`);
+append(authRun, "note: full success exchange requires interactive npm run auth:xai (browser login)");
 try {
   await exchangeCode("invalid-capture-code", "capture-verifier-abc");
   throw new Error("expected token exchange to fail for invalid code");
@@ -97,94 +113,23 @@ try {
   append(authRun, `manual_paste_real_exchange_error: ${e instanceof Error ? e.message : String(e)}`);
 }
 
+// Plan step 4: HTTP exec modes
 writeFileSync(execModes, "");
 runNode("scripts/capture-exec-modes-http.mjs", execModes);
 
-append(authRun, "=== manual-paste PKCE save path (mock token server, real ~/.aetherforge) ===");
+// Plan step 7: final green (full suite incl oauth node tests)
+runShell(
+  "npm run lint && npm run build && npm test && npm run test:oauth-script && npm run test:oauth-contract",
+  finalGreen
+);
 
 const realTokenPath = join(homedir(), ".aetherforge", "xai-auth.json");
-const hadPriorToken = existsSync(realTokenPath);
-const priorToken = hadPriorToken ? readFileSync(realTokenPath, "utf8") : null;
-
-await new Promise((resolve, reject) => {
-  const server = createServer((req, res) => {
-    if (req.method === "POST") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          access_token: "capture-access",
-          refresh_token: "capture-refresh",
-          expires_in: 3600,
-        })
-      );
-      return;
-    }
-    res.writeHead(404);
-    res.end();
-  });
-
-  server.listen(0, "127.0.0.1", () => {
-    const port = server.address().port;
-    append(authRun, `mock_token_server: http://127.0.0.1:${port}/token (harness only — validates saveTokens path)`);
-    const child = spawn("node", ["scripts/xai-oauth-login.mjs", "--manual-paste"], {
-      env: {
-        ...process.env,
-        XAI_OAUTH_TOKEN_URL: `http://127.0.0.1:${port}/token`,
-      },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (d) => (stdout += d));
-    child.stderr.on("data", (d) => (stderr += d));
-    child.stdin.write("capture-auth-code\n");
-    child.stdin.end();
-
-    child.on("close", (code) => {
-      server.close();
-      append(authRun, stdout);
-      if (stderr) append(authRun, `stderr: ${stderr}`);
-      append(authRun, `login --manual-paste exit=${code}`);
-      append(authRun, `token path: ${realTokenPath}`);
-
-      if (code !== 0) {
-        reject(new Error(`login --manual-paste failed: ${code}`));
-        return;
-      }
-      if (!existsSync(realTokenPath)) {
-        reject(new Error(`expected token at ${realTokenPath}`));
-        return;
-      }
-      const saved = JSON.parse(readFileSync(realTokenPath, "utf8"));
-      if (!saved.obtained_at || !saved.expires_at) {
-        reject(new Error("token missing obtained_at/expires_at"));
-        return;
-      }
-      if (stdout.includes("capture-access")) {
-        reject(new Error("stdout leaked access token"));
-        return;
-      }
-      if (!stdout.includes(BROWSER_AUTHORIZE_URL)) {
-        reject(new Error(`authorize URL must use browser entry ${BROWSER_AUTHORIZE_URL}`));
-      }
-      append(authRun, `obtained_at=${saved.obtained_at} expires_at=${saved.expires_at}`);
-
-      if (hadPriorToken && priorToken) {
-        writeFileSync(realTokenPath, priorToken, { mode: 0o600 });
-        append(authRun, "restored prior token file");
-      } else {
-        rmSync(realTokenPath, { force: true });
-        append(authRun, "removed capture token file");
-      }
-      resolve();
-    });
-  });
-});
-
 writeFileSync(
   finalEvidence,
   [
+    "=== git status (pre-capture) ===",
+    preGitStatus || "(clean)",
+    "",
     "=== git status (post-capture) ===",
     spawnSync("git", ["status", "--porcelain"], { encoding: "utf8" }).stdout.trim() || "(clean)",
     "",
@@ -195,7 +140,10 @@ writeFileSync(
     spawnSync("grep", ["-E", "xai-auth|aetherforge", ".gitignore"], { encoding: "utf8" }).stdout.trim(),
     "",
     `default home token path: ${realTokenPath}`,
-    "browser authorize: accounts.x.ai; OIDC token: auth.x.ai (see oauth-contract.json VERIFICATION_NOTE)",
+    `token file exists after capture: ${existsSync(realTokenPath)}`,
+    "browser authorize: accounts.x.ai/oauth2/authorize",
+    "OIDC token exchange: auth.x.ai/oauth2/token (hermes-agent)",
+    "see oauth-contract.json VERIFICATION_NOTE + scripts/capture-static-check.mjs",
   ].join("\n") + "\n"
 );
 

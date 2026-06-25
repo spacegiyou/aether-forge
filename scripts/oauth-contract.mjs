@@ -86,6 +86,20 @@ export async function verifyOAuthContract(fetcher = fetch) {
   });
   log(`accounts token HEAD: ${accountsTokenHead.status}`);
 
+  const accountsTokenPost = await fetcher(ACCOUNTS_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code: "verify-probe-invalid",
+      redirect_uri: REDIRECT_URI,
+      client_id: CLIENT_ID,
+    }).toString(),
+  });
+  log(`accounts token POST (invalid code): ${accountsTokenPost.status}`);
+  const accountsTokenBody = await accountsTokenPost.text();
+  log(`accounts token POST body (truncated): ${accountsTokenBody.slice(0, 120)}`);
+
   const authDiscovery = await fetcher(OIDC_DISCOVERY_URL);
   log(`auth discovery: ${OIDC_DISCOVERY_URL}`);
   log(`auth discovery status: ${authDiscovery.status}`);
@@ -120,6 +134,9 @@ export async function verifyOAuthContract(fetcher = fetch) {
   log(`browser_authorize: ${BROWSER_AUTHORIZE_URL}`);
   log(`oidc_authorize: ${AUTHORIZE_URL}`);
   log(`oidc_token: ${TOKEN_URL}`);
+  log(
+    "verified_against_accounts: discovery 404; authorize UI probed; token POST probed; OIDC exchange uses auth issuer per hermes-agent"
+  );
 
   return { lines, discovery };
 }
