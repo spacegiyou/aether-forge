@@ -38,6 +38,11 @@ export function hasApiKeyEnv(): boolean {
   return !!process.env.XAI_API_KEY?.trim();
 }
 
+/** OAuth token rejection on chat/responses — x.ai often returns 400, not only 401 */
+export function isOAuthAuthFailure(status: number | undefined): boolean {
+  return status === 400 || status === 401;
+}
+
 /** Pure 401/403 recovery planner — no I/O */
 export function planOAuthRecovery(input: {
   status: number | undefined;
@@ -51,7 +56,7 @@ export function planOAuthRecovery(input: {
     return hasApiKey ? "use-key" : "throw-allowlist";
   }
 
-  if (status === 401 && source === "oauth") {
+  if (isOAuthAuthFailure(status) && source === "oauth") {
     if (!refreshAttempted) return "refresh-once";
     if (hasApiKey) return "use-key";
     return "throw-reauth";

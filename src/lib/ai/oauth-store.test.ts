@@ -78,7 +78,7 @@ describe("oauth-store", () => {
     expect(String(init.body)).toContain("old-refresh");
   });
 
-  it("loadOAuthToken falls back to local file when home file is corrupt", () => {
+  it("loadOAuthToken falls back to local file when home file has invalid JSON", () => {
     const prevHome = process.env.HOME;
     const prevCwd = process.cwd();
     const prevAuthFile = process.env.XAI_AUTH_FILE;
@@ -92,6 +92,41 @@ describe("oauth-store", () => {
     const valid: OAuthTokenData = {
       access_token: "local-access",
       refresh_token: "local-refresh",
+      obtained_at: Date.now(),
+      expires_at: Date.now() + 7_200_000,
+    };
+    writeFileSync(join(cwdDir, ".xai-auth.json"), JSON.stringify(valid), "utf8");
+
+    delete process.env.XAI_AUTH_FILE;
+    process.env.HOME = homeDir;
+    process.chdir(cwdDir);
+
+    expect(loadOAuthToken()).toEqual(valid);
+
+    process.env.HOME = prevHome;
+    process.chdir(prevCwd);
+    if (prevAuthFile === undefined) delete process.env.XAI_AUTH_FILE;
+    else process.env.XAI_AUTH_FILE = prevAuthFile;
+  });
+
+  it("loadOAuthToken falls back to local file when home file lacks required fields", () => {
+    const prevHome = process.env.HOME;
+    const prevCwd = process.cwd();
+    const prevAuthFile = process.env.XAI_AUTH_FILE;
+
+    const homeDir = mkdtempSync(join(tmpdir(), "aetherforge-oauth-home-incomplete-"));
+    const homeTokenDir = join(homeDir, ".aetherforge");
+    mkdirSync(homeTokenDir, { recursive: true });
+    writeFileSync(
+      join(homeTokenDir, "xai-auth.json"),
+      JSON.stringify({ access_token: "incomplete-only" }),
+      "utf8"
+    );
+
+    const cwdDir = mkdtempSync(join(tmpdir(), "aetherforge-oauth-cwd-incomplete-"));
+    const valid: OAuthTokenData = {
+      access_token: "local-access-2",
+      refresh_token: "local-refresh-2",
       obtained_at: Date.now(),
       expires_at: Date.now() + 7_200_000,
     };

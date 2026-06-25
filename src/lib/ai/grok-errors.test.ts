@@ -23,6 +23,11 @@ describe("planOAuthRecovery", () => {
       want: "refresh-once",
     },
     {
+      name: "first oauth 400 (real x.ai invalid token) → refresh once",
+      input: { status: 400, source: "oauth", refreshAttempted: false, hasApiKey: true },
+      want: "refresh-once",
+    },
+    {
       name: "second oauth 401 with key → use-key",
       input: { status: 401, source: "oauth", refreshAttempted: true, hasApiKey: true },
       want: "use-key",

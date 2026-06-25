@@ -1,18 +1,112 @@
 #!/usr/bin/env node
 /**
  * POST /api/execute against next start — drain full NDJSON, assert last meta source.
+ * oauth-recovery: real api.x.ai 401 for OAuth bearer (via forward proxy) + real auth.x.ai
+ * refresh attempt + mock key success through XAI_BASE_URL proxy.
  */
 
 import { spawn, spawnSync } from "child_process";
+import { createServer } from "http";
 import { mkdtempSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
 const PORT = Number(process.env.EXEC_MODES_PORT || 3456);
 const BASE = `http://127.0.0.1:${PORT}`;
+const REAL_XAI_ORIGIN = "https://api.x.ai";
+
+const MOCK_EXECUTION = JSON.stringify({
+  steps: [{ agent: "coder", message: "http capture ok" }],
+  code: {
+    language: "typescript",
+    filename: "goal.ts",
+    content: "export async function run() { return true; }",
+  },
+  imagePrompt: "test",
+  thread: [{ index: 1, text: "post" }],
+  chartData: [{ name: "Speed", value: 80, agents: 2 }],
+  summary: "done",
+});
 
 function log(line) {
   console.log(line);
+}
+
+function mockChatCompletion(content) {
+  return JSON.stringify({
+    id: "chatcmpl-http-capture",
+    object: "chat.completion",
+    created: Math.floor(Date.now() / 1000),
+    model: "grok-code-fast-1",
+    choices: [
+      {
+        index: 0,
+        message: { role: "assistant", content },
+        finish_reason: "stop",
+      },
+    ],
+  });
+}
+
+/** Proxy: OAuth bearer → real api.x.ai; key bearer → mock success */
+function createXaiRecoveryProxy({ keyBearer, oauthBearerPrefix = "oauth-http" }) {
+  const hits = [];
+
+  const server = createServer(async (req, res) => {
+    const auth = req.headers.authorization ?? "";
+    const bearer = auth.replace(/^Bearer\s+/i, "");
+
+    if (bearer === keyBearer) {
+      hits.push(`mock_key: ${req.method} ${req.url}`);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(mockChatCompletion(MOCK_EXECUTION));
+      return;
+    }
+
+    const path = req.url?.startsWith("/v1/") ? req.url : `/v1${req.url ?? ""}`;
+    const target = `${REAL_XAI_ORIGIN}${path}`;
+    hits.push(`real_forward: ${req.method} ${target} oauth=${bearer.startsWith(oauthBearerPrefix)}`);
+
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = Buffer.concat(chunks);
+
+    const forward = await fetch(target, {
+      method: req.method,
+      headers: {
+        authorization: auth,
+        "content-type": req.headers["content-type"] ?? "application/json",
+      },
+      body: body.length > 0 ? body : undefined,
+    });
+
+    const responseBody = Buffer.from(await forward.arrayBuffer());
+    res.writeHead(forward.status, {
+      "Content-Type": forward.headers.get("content-type") ?? "application/json",
+    });
+    res.end(responseBody);
+  });
+
+  return {
+    server,
+    hits,
+    listen: () =>
+      new Promise((resolve, reject) => {
+        server.listen(0, "127.0.0.1", () => {
+          const addr = server.address();
+          if (!addr || typeof addr === "string") {
+            reject(new Error("proxy listen failed"));
+            return;
+          }
+          resolve(`http://127.0.0.1:${addr.port}/v1`);
+        });
+        server.on("error", reject);
+      }),
+    close: () =>
+      new Promise((resolve) => {
+        server.close(() => resolve());
+      }),
+  };
 }
 
 async function waitForServer(ms = 30_000) {
@@ -53,6 +147,9 @@ async function drainStream(label, env, opts = {}) {
       }),
       "utf8"
     );
+  }
+  if (opts.xaiBaseUrl) {
+    childEnv.XAI_BASE_URL = opts.xaiBaseUrl;
   }
 
   const server = spawn("npm", ["run", "start"], {
@@ -98,6 +195,10 @@ async function drainStream(label, env, opts = {}) {
     log(`META_COUNT [${label}]: ${metas.length}`);
     log(`TERMINAL [${label}]: ${events.at(-1)?.type ?? "none"}`);
 
+    if (opts.proxyHits?.length) {
+      for (const hit of opts.proxyHits) log(`PROXY_HIT [${label}]: ${hit}`);
+    }
+
     if (lastMeta.source !== opts.expectSource) {
       throw new Error(
         `${label}: expected last meta source ${opts.expectSource}, got ${lastMeta.source}`
@@ -106,6 +207,11 @@ async function drainStream(label, env, opts = {}) {
     if (opts.expectMetaCount !== undefined && metas.length !== opts.expectMetaCount) {
       throw new Error(
         `${label}: expected META_COUNT ${opts.expectMetaCount}, got ${metas.length}`
+      );
+    }
+    if (opts.expectTerminal && events.at(-1)?.type !== opts.expectTerminal) {
+      throw new Error(
+        `${label}: expected terminal ${opts.expectTerminal}, got ${events.at(-1)?.type}`
       );
     }
     return lastMeta;
@@ -124,7 +230,7 @@ if (build.status !== 0) {
 
 log(`=== HTTP POST /api/execute full-stream meta (next start :${PORT}) ===`);
 
-await drainStream("mock", { AI_MODE: "auto" }, { dropKey: true, expectSource: "mock" });
+await drainStream("mock", { AI_MODE: "auto" }, { dropKey: true, expectSource: "mock", expectTerminal: "done" });
 await drainStream(
   "key",
   { AI_MODE: "auto", XAI_API_KEY: "xai-http-capture-key" },
@@ -136,11 +242,30 @@ await drainStream("oauth", { AI_MODE: "auto" }, {
   expectMetaCount: 1,
 });
 
-// Real api.x.ai 401 → OAuth refresh (real token URL) → key escape; unmocked network
-await drainStream(
-  "oauth-recovery",
-  { AI_MODE: "auto", XAI_API_KEY: "xai-http-recovery-escape" },
-  { expectSource: "key", expectMetaCount: 2 }
-);
+const recoveryKey = "xai-http-recovery-escape";
+const proxy = createXaiRecoveryProxy({ keyBearer: recoveryKey });
+const proxyBase = await proxy.listen();
+log(`RECOVERY_PROXY_BASE: ${proxyBase}`);
+
+try {
+  await drainStream(
+    "oauth-recovery",
+    { AI_MODE: "auto", XAI_API_KEY: recoveryKey },
+    {
+      expectSource: "key",
+      expectMetaCount: 2,
+      expectTerminal: "done",
+      xaiBaseUrl: proxyBase,
+      proxyHits: proxy.hits,
+    }
+  );
+
+  const hadRealForward = proxy.hits.some((h) => h.startsWith("real_forward:"));
+  const hadMockKey = proxy.hits.some((h) => h.startsWith("mock_key:"));
+  if (!hadRealForward) throw new Error("oauth-recovery: expected real api.x.ai forward");
+  if (!hadMockKey) throw new Error("oauth-recovery: expected mock key success after escape");
+} finally {
+  await proxy.close();
+}
 
 log("=== HTTP exec-modes capture complete ===");

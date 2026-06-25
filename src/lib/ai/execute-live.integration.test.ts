@@ -1,20 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import { streamLiveExecution } from "./execute-live";
 import { generateGrokImage } from "./generate-image";
-import { loadOAuthToken, refreshOAuthToken } from "./oauth-store";
+import { XAI_OAUTH_TOKEN_URL } from "./oauth-constants";
 
 vi.mock("./generate-image", () => ({
   generateGrokImage: vi.fn().mockResolvedValue({}),
 }));
-
-vi.mock("./oauth-store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./oauth-store")>();
-  return {
-    ...actual,
-    loadOAuthToken: vi.fn(),
-    refreshOAuthToken: vi.fn(),
-  };
-});
 
 function bearerToken(init?: RequestInit): string {
   const headers = init?.headers;
@@ -73,8 +67,24 @@ async function collectAll(goal: string, credential: Parameters<typeof streamLive
 describe("streamLiveExecution (real Grok client path)", () => {
   const original = { ...process.env };
   let fetchMock: ReturnType<typeof vi.fn>;
+  let tokenFile: string;
 
   beforeEach(() => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "aetherforge-live-int-"));
+    tokenFile = join(tmpDir, "xai-auth.json");
+    writeFileSync(
+      tokenFile,
+      JSON.stringify({
+        access_token: "oauth-live",
+        refresh_token: "oauth-ref",
+        obtained_at: Date.now(),
+        expires_at: Date.now() + 9_999_999,
+      }),
+      "utf8"
+    );
+    process.env.XAI_AUTH_FILE = tokenFile;
+    process.env.XAI_API_KEY = "xai-live-escape";
+
     fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     vi.mocked(generateGrokImage).mockResolvedValue({});
@@ -86,32 +96,29 @@ describe("streamLiveExecution (real Grok client path)", () => {
     vi.restoreAllMocks();
   });
 
-  it("full stream: OAuth 401 via real OpenAI SDK then key escape yields two metas", async () => {
-    let oauthCalls = 0;
-    fetchMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+  it("full stream: OAuth 401 then real refresh failure then key escape yields two metas", async () => {
+    let oauthApiCalls = 0;
+    let refreshCalls = 0;
+
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const urlStr = String(url);
       const auth = bearerToken(init);
+
+      if (urlStr.startsWith(XAI_OAUTH_TOKEN_URL)) {
+        refreshCalls++;
+        return new Response(JSON.stringify({ error: "invalid_grant" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
       if (auth === "xai-live-escape") return chatOk(VALID_EXECUTION);
       if (auth.startsWith("oauth-")) {
-        oauthCalls++;
+        oauthApiCalls++;
         return chatErr(401);
       }
       return chatErr(401);
     });
-
-    vi.mocked(loadOAuthToken).mockReturnValue({
-      access_token: "oauth-live",
-      refresh_token: "oauth-ref",
-      obtained_at: Date.now(),
-      expires_at: Date.now() + 9_999_999,
-    });
-    vi.mocked(refreshOAuthToken).mockResolvedValue({
-      access_token: "oauth-refreshed-live",
-      refresh_token: "oauth-ref",
-      obtained_at: Date.now(),
-      expires_at: Date.now() + 9_999_999,
-    });
-
-    process.env.XAI_API_KEY = "xai-live-escape";
 
     const events = await collectAll("integration goal", {
       source: "oauth",
@@ -124,7 +131,8 @@ describe("streamLiveExecution (real Grok client path)", () => {
       { type: "meta", aiMode: "live", source: "key" },
     ]);
     expect(events.find((e) => e.type === "output")).toBeDefined();
-    expect(oauthCalls).toBeGreaterThanOrEqual(2);
+    expect(oauthApiCalls).toBeGreaterThanOrEqual(1);
+    expect(refreshCalls).toBe(1);
     expect(fetchMock).toHaveBeenCalled();
   });
 });
