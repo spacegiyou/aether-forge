@@ -71,8 +71,8 @@ export function OutputPanel({ output, source = "mock" }: OutputPanelProps) {
             <CardTitle className="flex items-center gap-2 text-sm">
               <ImageIcon className="h-4 w-4 text-violet-400" />
               Generated Image
-              <Badge variant={showLiveImage ? "green" : "violet"} className="ml-auto">
-                {showLiveImage ? "Live" : "Demo"}
+              <Badge variant={showLiveImage ? badgeVariant : "violet"} className="ml-auto">
+                {showLiveImage ? badgeLabel : "Demo"}
               </Badge>
             </CardTitle>
           </CardHeader>
