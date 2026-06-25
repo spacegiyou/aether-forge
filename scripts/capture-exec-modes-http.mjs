@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * POST /api/execute against next start — drain full NDJSON, assert last meta source.
- * oauth-recovery: real api.x.ai 401 for OAuth bearer (via forward proxy) + real auth.x.ai
- * refresh attempt + mock key success through XAI_BASE_URL proxy.
+ * oauth-recovery: real api.x.ai rejection for OAuth bearer (forward proxy) + real OIDC
+ * token refresh attempt + mock key success through XAI_BASE_URL proxy.
  */
 
 import { spawn, spawnSync } from "child_process";
