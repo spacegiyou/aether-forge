@@ -15,9 +15,9 @@ export type RecoveryAction =
   | "rethrow";
 
 export function getHttpStatus(err: unknown): number | undefined {
-  if (err && typeof err === "object" && "status" in err) {
+  if (err && typeof err === "object") {
     const status = (err as { status?: unknown }).status;
-    return typeof status === "number" ? status : undefined;
+    if (typeof status === "number") return status;
   }
   return undefined;
 }
@@ -94,7 +94,6 @@ export async function withCredentialFallback<T>(
         refreshAttempted,
         hasApiKey: hasApiKeyEnv(),
       });
-
       switch (action) {
         case "refresh-once": {
           refreshAttempted = true;

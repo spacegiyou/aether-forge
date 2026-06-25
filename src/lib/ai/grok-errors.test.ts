@@ -1,8 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
+import OpenAI, { AuthenticationError } from "openai";
 import {
   planOAuthRecovery,
   getKeyEscapeCredential,
+  getHttpStatus,
   withCredentialFallback,
+
   OAUTH_ALLOWLIST_MESSAGE,
   type RecoveryAction,
 } from "./grok-errors";
@@ -62,6 +65,15 @@ describe("getKeyEscapeCredential", () => {
   });
 });
 
+function bearerToken(init?: RequestInit): string {
+  const headers = init?.headers;
+  const raw =
+    headers instanceof Headers
+      ? headers.get("Authorization")
+      : (headers as Record<string, string> | undefined)?.Authorization;
+  return String(raw ?? "").replace(/^Bearer\s+/i, "");
+}
+
 function apiError(status: number): Error & { status: number } {
   const e = new Error(`HTTP ${status}`) as Error & { status: number };
   e.status = status;
@@ -70,6 +82,127 @@ function apiError(status: number): Error & { status: number } {
 
 describe("withCredentialFallback", () => {
   const oauthCred: XaiCredential = { source: "oauth", token: "oauth-tok" };
+
+  it("getHttpStatus reads status from awaited OpenAI AuthenticationError", async () => {
+    const mockFetch: typeof fetch = async () =>
+      new Response(JSON.stringify({ error: { message: "Unauthorized" } }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    const client = new OpenAI({
+      apiKey: "oauth-tok",
+      baseURL: "https://api.x.ai/v1",
+      fetch: mockFetch,
+    });
+    try {
+      await client.chat.completions.create({
+        model: "grok-4.3",
+        messages: [{ role: "user", content: "hi" }],
+      });
+      expect.fail("expected throw");
+    } catch (err) {
+      expect(getHttpStatus(err)).toBe(401);
+    }
+  });
+
+  it("recovers when fn awaits real OpenAI client chat 401 then key success", async () => {
+    let oauthAttempts = 0;
+    const mockFetch: typeof fetch = async (_url, init) => {
+      const auth = bearerToken(init);
+      if (auth === "xai-fallback") {
+        return new Response(
+          JSON.stringify({
+            id: "chatcmpl-test",
+            object: "chat.completion",
+            created: Math.floor(Date.now() / 1000),
+            model: "grok-code-fast-1",
+            choices: [
+              {
+                index: 0,
+                message: { role: "assistant", content: '{"summary":"ok"}' },
+                finish_reason: "stop",
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      oauthAttempts++;
+      return new Response(
+        JSON.stringify({ error: { message: "Unauthorized", type: "invalid_request_error" } }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    };
+
+    const getClient = async (cred: XaiCredential) =>
+      new OpenAI({ apiKey: cred.token!, baseURL: "https://api.x.ai/v1", fetch: mockFetch });
+
+    const deps = {
+      loadOAuth: () => ({
+        access_token: "oauth-tok",
+        refresh_token: "oauth-ref",
+        obtained_at: Date.now(),
+        expires_at: Date.now() + 9999,
+      }),
+      refreshOAuth: async () => ({
+        access_token: "oauth-refreshed",
+        refresh_token: "oauth-ref",
+        obtained_at: Date.now(),
+        expires_at: Date.now() + 9999,
+      }),
+      getKeyEscape: () => ({ source: "key" as const, token: "xai-fallback" }),
+    };
+    const prev = process.env.XAI_API_KEY;
+    process.env.XAI_API_KEY = "xai-fallback";
+
+    const { result, source } = await withCredentialFallback(
+      oauthCred,
+      async (_cred, client) => {
+        const completion = await client.chat.completions.create({
+          model: "grok-4.3",
+          messages: [{ role: "user", content: "hi" }],
+        });
+        return completion.choices[0]?.message?.content ?? "";
+      },
+      getClient,
+      deps
+    );
+
+    expect(source).toBe("key");
+    expect(result).toContain("summary");
+    expect(oauthAttempts).toBeGreaterThanOrEqual(2);
+    process.env.XAI_API_KEY = prev;
+  });
+
+  it("recovers from OpenAI AuthenticationError (real SDK error shape)", async () => {
+    const fn = vi.fn(async (cred: XaiCredential) => {
+      if (cred.source === "key") return "ok";
+      throw new AuthenticationError(401, { message: "Unauthorized" }, undefined, new Headers());
+    });
+    expect(getHttpStatus(new AuthenticationError(401, { message: "x" }, undefined, new Headers()))).toBe(
+      401
+    );
+
+    const deps = {
+      loadOAuth: () => null,
+      refreshOAuth: async () => {
+        throw new Error("n/a");
+      },
+      getKeyEscape: () => ({ source: "key" as const, token: "xai-fallback" }),
+    };
+    const prev = process.env.XAI_API_KEY;
+    process.env.XAI_API_KEY = "xai-fallback";
+
+    const { result, source } = await withCredentialFallback(
+      oauthCred,
+      fn,
+      async () => ({} as never),
+      deps
+    );
+    expect(result).toBe("ok");
+    expect(source).toBe("key");
+    process.env.XAI_API_KEY = prev;
+  });
 
   it("second 401 after refresh succeeds falls back to key escape", async () => {
     const fn = vi.fn(async (cred) => {

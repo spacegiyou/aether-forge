@@ -84,9 +84,23 @@ describe("streamLiveExecution", () => {
       token: "oauth-tok",
     });
 
-    const meta = events.find((e) => e.type === "meta");
-    expect(meta).toEqual({ type: "meta", aiMode: "live", source: "key" });
+    const metas = events.filter((e) => e.type === "meta");
+    expect(metas[0]).toEqual({ type: "meta", aiMode: "live", source: "oauth" });
+    expect(metas.at(-1)).toEqual({ type: "meta", aiMode: "live", source: "key" });
     expect(oauthCalls).toBeGreaterThanOrEqual(2);
     expect(vi.mocked(createGrokJsonCompletion).mock.calls.some((c) => c[1] === "key")).toBe(true);
+  });
+
+  it("yields early meta with attempted source when fetch fails unrecoverably", async () => {
+    vi.mocked(createGrokJsonCompletion).mockRejectedValue(new Error("re-authentication required"));
+
+    const events = await collectEvents("fail goal", {
+      source: "oauth",
+      token: "oauth-tok",
+    });
+
+    const metas = events.filter((e) => e.type === "meta");
+    expect(metas).toEqual([{ type: "meta", aiMode: "live", source: "oauth" }]);
+    expect(events.find((e) => e.type === "error")).toBeDefined();
   });
 });

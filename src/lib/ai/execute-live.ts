@@ -50,10 +50,15 @@ export async function* streamLiveExecution(
   credential: XaiCredential
 ): AsyncGenerator<ExecuteStreamEvent> {
   try {
+    // Early meta so UI badge reflects attempted credential even if fetch fails
+    yield { type: "meta", aiMode: "live", source: credential.source };
+
     const { execution, source } = await fetchGrokExecution(goal, credential);
 
-    // Meta reflects post-recovery source (e.g. key after OAuth 401 refresh)
-    yield { type: "meta", aiMode: "live", source };
+    // Post-recovery meta when 401/403 fallback changed the active source
+    if (source !== credential.source) {
+      yield { type: "meta", aiMode: "live", source };
+    }
 
     for (let i = 0; i < execution.steps.length; i++) {
       const s = execution.steps[i];
