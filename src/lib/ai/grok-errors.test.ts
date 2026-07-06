@@ -120,7 +120,7 @@ describe("withCredentialFallback", () => {
             id: "chatcmpl-test",
             object: "chat.completion",
             created: Math.floor(Date.now() / 1000),
-            model: "grok-code-fast-1",
+            model: "grok-build-0.1",
             choices: [
               {
                 index: 0,

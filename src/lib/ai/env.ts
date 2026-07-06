@@ -5,7 +5,7 @@ const aiEnvSchema = z.object({
   AI_MODE: z.enum(["mock", "key", "oauth", "auto"]).default("auto"),
   XAI_API_KEY: z.string().min(1).optional(),
   GROK_TEXT_MODEL: z.string().default("grok-4.3"),
-  GROK_FAST_MODEL: z.string().default("grok-code-fast-1"),
+  GROK_FAST_MODEL: z.string().default("grok-build-0.1"),
   GROK_IMAGE_MODEL: z.string().default("grok-imagine-image-quality"),
 });
 
@@ -17,7 +17,7 @@ function readRawEnv(): Record<string, string | undefined> {
     AI_MODE: process.env.AI_MODE ?? "auto",
     XAI_API_KEY: process.env.XAI_API_KEY,
     GROK_TEXT_MODEL: process.env.GROK_TEXT_MODEL ?? "grok-4.3",
-    GROK_FAST_MODEL: process.env.GROK_FAST_MODEL ?? "grok-code-fast-1",
+    GROK_FAST_MODEL: process.env.GROK_FAST_MODEL ?? "grok-build-0.1",
     GROK_IMAGE_MODEL: process.env.GROK_IMAGE_MODEL ?? "grok-imagine-image-quality",
   };
 }

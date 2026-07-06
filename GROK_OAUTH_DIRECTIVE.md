@@ -94,10 +94,10 @@ the API-key path may keep `chat.completions`. Abstract the call behind one funct
 so the rest of the code doesn't care.
 
 **Model per source.** The OAuth subscription catalog is `grok-4.3` and
-`grok-4.20-*` — it does **not** include `grok-code-fast-1` (that's an API-platform
+`grok-4.20-*` — it does **not** include `grok-build-0.1` (that's an API-platform
 model). So:
 - `oauth` source → use `GROK_TEXT_MODEL` (`grok-4.3`).
-- `key` source → may use `GROK_FAST_MODEL` (`grok-code-fast-1`) as today.
+- `key` source → may use `GROK_FAST_MODEL` (`grok-build-0.1`) as today.
 Pick the model from the resolved source.
 
 ## 3. OAuth login flow (PKCE loopback) + token store

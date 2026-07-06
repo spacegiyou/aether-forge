@@ -1,0 +1,11 @@
+.git
+.github
+.next
+.verify-scratch
+.scratch-oauth-evidence
+.aetherforge
+node_modules
+tsconfig.tsbuildinfo
+next-env.d.ts
+grok_report - 2026-06-23T220652.556.pdf
+public/AetherForge_Virality_and_Productization_Directive.md

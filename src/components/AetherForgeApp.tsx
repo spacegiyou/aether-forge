@@ -9,7 +9,7 @@ import { TabPanel } from "@/components/tabs/TabPanel";
 import type { AgentType } from "@/lib/generators/goal-processor";
 
 export function AetherForgeApp() {
-  const [goal, setGoal] = useState("Build a stunning agentic AI studio for 2026");
+  const [goal, setGoal] = useState("Build a launch-ready agentic AI studio");
   const [draggingAgent, setDraggingAgent] = useState<AgentType | null>(null);
   const [addAgentKey, setAddAgentKey] = useState(0);
   const [addAgentType, setAddAgentType] = useState<AgentType | null>(null);

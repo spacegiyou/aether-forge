@@ -1,21 +1,21 @@
-/** Generate a beautiful README with embedded demo GIF placeholder */
+/** Generate a README with the current demo GIF. */
 export function generateReadme(projectName: string, goal: string): string {
   return `# ${projectName}
 
-> **AetherForge — 2026 Agentic AI Studio**  
-> Forged by an autonomous agent swarm. This README was auto-generated.
+> **AetherForge - Grok-Built Agentic AI Studio**<br />
+> Generated from the app's export flow.
 
-![Demo GIF Placeholder](./public/demo.gif)
+![AetherForge demo](./public/demo.gif)
 
 ## 🎯 Mission
 
-${goal || "Ship production-ready agentic experiences at the speed of thought."}
+${goal || "Explore a mock-safe agentic AI workflow with optional live xAI execution."}
 
 ## ✨ Features
 
 - **Live Swarm Viz** — Real-time agent collaboration canvas
 - **Multimodal Lab** — Prompt → video + audio synthesis (simulated)
-- **One-Click Deploy** — Vercel-ready in seconds
+- **One-Click Deploy** — Vercel-oriented export flow
 - **Viral Kit** — Auto-generated X threads + image packs
 
 ## 🚀 Quick Start
@@ -45,10 +45,10 @@ Open [http://localhost:3000](http://localhost:3000) to enter the forge.
 
 ## 📸 Demo
 
-> Replace \`public/demo.gif\` with your screen recording for the full Awwwards effect.
+The bundled \`public/demo.gif\` gives readers a quick tour of the main workflow.
 
 ---
 
-*Built with Grok Build — proof of agentic creation power.*
+*Built with Grok Build.*
 `;
 }

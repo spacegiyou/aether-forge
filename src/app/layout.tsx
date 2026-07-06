@@ -14,10 +14,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined) ??
+  "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "AetherForge - 2026 Agentic AI Studio",
+  metadataBase: new URL(siteUrl),
+  title: "AetherForge - Grok-Built Agentic AI Studio",
   description:
-    "A stunning agentic AI studio — drag agents, execute goals, visualize swarms, and ship to production.",
+    "A cinematic Next.js agentic AI prototype with a swarm canvas, mock-safe execution, optional live xAI routes, and export tooling.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -25,8 +32,9 @@ export const metadata: Metadata = {
     title: "AetherForge",
   },
   openGraph: {
-    title: "AetherForge - 2026 Agentic AI Studio",
-    description: "Built with Grok Build — proof of agentic creation power.",
+    title: "AetherForge - Grok-Built Agentic AI Studio",
+    description: "Swarm canvas, mock-safe execution, optional live xAI routes, and export tooling.",
+    images: [{ url: "/og-image.png", width: 1280, height: 640, alt: "AetherForge swarm canvas preview" }],
     type: "website",
   },
 };

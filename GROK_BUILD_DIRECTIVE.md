@@ -122,7 +122,7 @@ official OpenAI SDK with a swapped `baseURL` and key.
 > xAI ships fast and renames models. As of this writing (June 2026) the relevant
 > models are:
 > - `grok-4.3` — primary chat + coding model (1M-token context).
-> - `grok-code-fast-1` (alias `grok-build-0.1`) — fast agentic coding, 256K context.
+> - `grok-build-0.1` — fast agentic coding, 256K context (`grok-code-fast-1` is an alias/migration source).
 > - `grok-4.20` — reasoning / multi-agent, 2M-token context.
 > - **Images:** `POST https://api.x.ai/v1/images/generations`, model
 >   `grok-imagine-image-quality` (recommended; `grok-imagine-image-pro` is being
@@ -138,7 +138,7 @@ Steps:
      baseURL: "https://api.x.ai/v1",
    });
    export const GROK_TEXT_MODEL = process.env.GROK_TEXT_MODEL ?? "grok-4.3";
-   export const GROK_FAST_MODEL = process.env.GROK_FAST_MODEL ?? "grok-code-fast-1";
+   export const GROK_FAST_MODEL = process.env.GROK_FAST_MODEL ?? "grok-build-0.1";
    export const GROK_IMAGE_MODEL = process.env.GROK_IMAGE_MODEL ?? "grok-imagine-image-quality";
    ```
 3. Add `src/lib/ai/env.ts` that validates `process.env` with Zod at startup and
@@ -161,7 +161,7 @@ Steps:
   step log must reflect what actually happened.
 
 ### B2. Real code generation (replace `code-generator.ts`)
-- Ask `grok-code-fast-1` to generate **real, runnable** code for the user's goal.
+- Ask `grok-build-0.1` to generate **real, runnable** code for the user's goal.
 - Render with real syntax highlighting (`shiki`), keep the copy button, and make
   the "download repo" path real (see B8). Show the true filename/language Grok
   returns.
@@ -287,7 +287,7 @@ says **Real** or **Demo**, and document required env vars and setup.
 # xAI / Grok (server-only — never expose to the client)
 XAI_API_KEY=xai-...                     # https://console.x.ai  (free dev credits available)
 GROK_TEXT_MODEL=grok-4.3                 # verify current name at https://docs.x.ai
-GROK_FAST_MODEL=grok-code-fast-1
+GROK_FAST_MODEL=grok-build-0.1
 GROK_IMAGE_MODEL=grok-imagine-image-quality
 
 # Persistence (Supabase or Vercel Postgres/KV)

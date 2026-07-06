@@ -48,10 +48,12 @@ export function OutputPanel({ output, source = "mock" }: OutputPanelProps) {
       >
         <Card data-testid="output-code">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm">
+            <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
               <Code2 className="h-4 w-4 text-emerald-400" />
-              Generated Code
-              <span className="ml-auto font-mono text-[10px] text-muted-foreground">{output.code.filename}</span>
+              <span className="truncate">Generated Code</span>
+              <span className="ml-auto hidden max-w-28 truncate whitespace-nowrap font-mono text-[10px] text-muted-foreground 2xl:block">
+                {output.code.filename}
+              </span>
               <Badge variant={badgeVariant}>
                 {badgeLabel}
               </Badge>

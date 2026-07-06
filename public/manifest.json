@@ -1,7 +1,7 @@
 {
-  "name": "AetherForge - 2026 Agentic AI Studio",
+  "name": "AetherForge - Grok-Built Agentic AI Studio",
   "short_name": "AetherForge",
-  "description": "Agentic AI studio with swarm visualization, multimodal lab, and one-click deploy.",
+  "description": "Agentic AI prototype with swarm visualization, mock-safe execution, multimodal lab, and export tooling.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#030712",

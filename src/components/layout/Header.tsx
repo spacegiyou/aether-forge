@@ -22,7 +22,7 @@ export function Header({ goal }: HeaderProps) {
             AetherForge
           </h1>
           <p className="text-[10px] text-muted-foreground md:text-xs">
-            2026 Agentic AI Studio
+            Grok-Built AI Studio
           </p>
         </div>
       </div>

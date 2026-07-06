@@ -12,7 +12,7 @@ vi.mock("@/lib/ai/generate-image", () => ({
 }));
 vi.mock("@/lib/ai/grok-client", () => ({
   getGrokClient: vi.fn().mockResolvedValue({}),
-  getModelForSource: (s: string) => (s === "oauth" ? "grok-4.3" : "grok-code-fast-1"),
+  getModelForSource: (s: string) => (s === "oauth" ? "grok-4.3" : "grok-build-0.1"),
 }));
 
 const VALID_EXECUTION = JSON.stringify({

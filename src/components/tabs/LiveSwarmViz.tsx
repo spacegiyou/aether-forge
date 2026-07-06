@@ -10,6 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { generateChartData } from "@/lib/generators/chart-generator";
 import { Activity, RefreshCw } from "lucide-react";
 
+function formatPercent(value: number | undefined) {
+  return `${Math.round(value ?? 0)}%`;
+}
+
 export function LiveSwarmViz() {
   const [data, setData] = useState(generateChartData("swarm-live"));
   const [tick, setTick] = useState(0);
@@ -31,11 +35,11 @@ export function LiveSwarmViz() {
 
   return (
     <div className="space-y-4" data-testid="tab-swarm-viz">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
           <Activity className="h-4 w-4 text-cyan-400 animate-pulse" />
-          <span className="text-sm font-semibold">Live Swarm Telemetry</span>
-          <Badge variant="default">Demo</Badge>
+          <span className="truncate text-sm font-semibold">Live Swarm Telemetry</span>
+          <Badge variant="default">Mock Mode</Badge>
         </div>
         <Button variant="glass" size="sm" onClick={() => setData(generateChartData(`refresh-${Date.now()}`))}>
           <RefreshCw className="h-3 w-3" />
@@ -49,10 +53,10 @@ export function LiveSwarmViz() {
             key={agent}
             animate={{ opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
-            className="glass-panel rounded-lg p-3 text-center"
+            className="glass-panel min-w-0 rounded-lg p-3 text-center"
           >
-            <p className="text-[10px] text-muted-foreground">{agent}</p>
-            <p className="text-lg font-bold text-cyan-300">{data[i]?.value ?? 0}%</p>
+            <p className="truncate text-[10px] text-muted-foreground">{agent}</p>
+            <p className="tabular-nums text-lg font-bold text-cyan-300">{formatPercent(data[i]?.value)}</p>
           </motion.div>
         ))}
       </div>

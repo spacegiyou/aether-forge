@@ -38,6 +38,10 @@ yarn-error.log*
 .xai-auth.json
 .aetherforge/
 .scratch-oauth-evidence/
+.verify-scratch/
+
+# local launch/review notes
+/public/AetherForge_Virality_and_Productization_Directive.md
 
 # vercel
 .vercel

@@ -32,7 +32,7 @@ describe("resolveXaiCredential", () => {
         AI_MODE: "mock",
         XAI_API_KEY: "xai-key",
         GROK_TEXT_MODEL: "grok-4.3",
-        GROK_FAST_MODEL: "grok-code-fast-1",
+        GROK_FAST_MODEL: "grok-build-0.1",
         GROK_IMAGE_MODEL: "grok-imagine-image-quality",
       }),
     });
@@ -46,7 +46,7 @@ describe("resolveXaiCredential", () => {
         AI_MODE: "key",
         XAI_API_KEY: "xai-key",
         GROK_TEXT_MODEL: "grok-4.3",
-        GROK_FAST_MODEL: "grok-code-fast-1",
+        GROK_FAST_MODEL: "grok-build-0.1",
         GROK_IMAGE_MODEL: "grok-imagine-image-quality",
       }),
     });
@@ -70,7 +70,7 @@ describe("resolveXaiCredential", () => {
         AI_MODE: "auto",
         XAI_API_KEY: "xai-key",
         GROK_TEXT_MODEL: "grok-4.3",
-        GROK_FAST_MODEL: "grok-code-fast-1",
+        GROK_FAST_MODEL: "grok-build-0.1",
         GROK_IMAGE_MODEL: "grok-imagine-image-quality",
       }),
     });
@@ -86,7 +86,7 @@ describe("resolveXaiCredential", () => {
         AI_MODE: "auto",
         XAI_API_KEY: "xai-key",
         GROK_TEXT_MODEL: "grok-4.3",
-        GROK_FAST_MODEL: "grok-code-fast-1",
+        GROK_FAST_MODEL: "grok-build-0.1",
         GROK_IMAGE_MODEL: "grok-imagine-image-quality",
       }),
     });
@@ -99,7 +99,7 @@ describe("resolveXaiCredential", () => {
       getEnv: () => ({
         AI_MODE: "auto",
         GROK_TEXT_MODEL: "grok-4.3",
-        GROK_FAST_MODEL: "grok-code-fast-1",
+        GROK_FAST_MODEL: "grok-build-0.1",
         GROK_IMAGE_MODEL: "grok-imagine-image-quality",
       }),
     });
@@ -112,7 +112,7 @@ describe("resolveXaiCredential", () => {
       getEnv: () => ({
         AI_MODE: "oauth",
         GROK_TEXT_MODEL: "grok-4.3",
-        GROK_FAST_MODEL: "grok-code-fast-1",
+        GROK_FAST_MODEL: "grok-build-0.1",
         GROK_IMAGE_MODEL: "grok-imagine-image-quality",
       }),
     });
@@ -126,7 +126,7 @@ describe("resolveXaiCredential", () => {
         AI_MODE: "oauth",
         XAI_API_KEY: "xai-key",
         GROK_TEXT_MODEL: "grok-4.3",
-        GROK_FAST_MODEL: "grok-code-fast-1",
+        GROK_FAST_MODEL: "grok-build-0.1",
         GROK_IMAGE_MODEL: "grok-imagine-image-quality",
       }),
     });

@@ -21,7 +21,7 @@ WHAT TO DO:
 2. Phase B — replace EVERY simulation with real xAI Grok calls: streaming goal execution (replace the setTimeout + lorem in src/actions/execute-goal.ts and src/lib/generators/*), real code generation, a real X thread (remove the fake engagement numbers), a real research feed, real image generation, real Supabase persistence (replace src/lib/storage/supabase-mock.ts), and a real Vercel deploy/export (replace the 2s setTimeout in OneClickDeploy.tsx and the stub in repo-exporter.ts).
 3. Phase C — production polish: responsive layout, performance (Lighthouse >= 90), accessibility (WCAG AA), security, observability, and an honesty pass so every README feature is marked Real vs Demo.
 
-xAI API: OpenAI-compatible at https://api.x.ai/v1 with env var XAI_API_KEY. Verify current model names at https://docs.x.ai (as of June 2026: grok-4.3 for chat/coding, grok-code-fast-1 for fast agentic coding, grok-imagine-image-quality for images). Add the `openai` and `zod` packages and provide a .env.example.
+xAI API: OpenAI-compatible at https://api.x.ai/v1 with env var XAI_API_KEY. Verify current model names at https://docs.x.ai (as of July 2026: grok-4.3 for chat/planning, grok-build-0.1 for agentic coding, grok-imagine-image-quality for images). Add the `openai` and `zod` packages and provide a .env.example.
 
 Ship in 5 incremental PRs as laid out in the directive. DEFINITION OF DONE = the acceptance checklist in GROK_BUILD_DIRECTIVE.md section 5: real, goal-specific Grok output visible in the browser network tab, no secret in the client bundle, lint/build/test all green, Lighthouse >= 90, and an accurate README.
 

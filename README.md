@@ -1,14 +1,22 @@
-# AetherForge — 2026 Agentic AI Studio
+# AetherForge - Grok-Built Agentic AI Studio
 
-> **A stunning, production-ready agentic AI studio built with Next.js 16, React Flow, Three.js, and Grok Build.**
+> **A cinematic Next.js prototype/template for agentic AI workflows, built around a swarm canvas, mock-safe execution, and optional live xAI routes.**
 
-> **Demo GIF:** `public/demo.gif` is a **placeholder** — record a screen capture and replace it before sharing on X.
+![AetherForge demo](public/demo.gif)
+
+## Live Demo
+
+[Open AetherForge on Vercel](https://aether-forge-beta.vercel.app)
+
+## Launch Video
+
+[Watch the 22-second English launch video](public/launch-video.mp4)
 
 ## ✨ What is AetherForge?
 
-AetherForge is an interactive demonstration of the future of agentic AI tooling. Drag four specialized agents onto a collaboration canvas, set a goal, and watch the swarm execute — generating code, visuals, X threads, and analytics in real time.
+AetherForge is an interactive demonstration of agentic AI tooling. Drag four specialized agents onto a collaboration canvas, set a goal, and watch the swarm execute - generating code, visuals, X threads, and analytics in mock-safe mode or through optional live xAI credentials.
 
-Built as proof of **Grok Build** power for sharing on X.
+Built as a **Grok Build** showcase for GitHub, Vercel, and X.
 
 ## 🎯 Core Features — Real vs Demo
 
@@ -67,6 +75,8 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## 📦 Deploy
 
+The app runs safely in mock mode without credentials. Add `XAI_API_KEY` later if you want live xAI output.
+
 ```bash
 chmod +x scripts/deploy-vercel.sh
 ./scripts/deploy-vercel.sh
@@ -85,12 +95,19 @@ npx vercel --prod
 npm test
 ```
 
-## 📸 Demo GIF (placeholder)
+## 📸 Demo GIF
 
-`public/demo.gif` is currently a placeholder asset. Replace it with a screen recording of:
+`public/demo.gif` should show:
 1. Dragging agents onto the canvas
 2. Executing a goal
 3. Browsing all four tabs
+
+Regenerate launch media while the dev server is running:
+
+```bash
+npm run dev -- --port 3456
+node scripts/create-launch-assets.mjs http://localhost:3456
+```
 
 ## 📁 Project Structure
 
@@ -114,6 +131,10 @@ src/
 ## 🌌 Theme
 
 Dark cosmic xAI-inspired glassmorphism with cyan/violet accents. Toggle light mode via the header sun/moon button.
+
+## License
+
+MIT
 
 ---
 
