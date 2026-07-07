@@ -1,7 +1,10 @@
-# AetherForge Launch Kit
+# AetherForge Launch Notes
 
-## X Post
+Optional social copy and asset notes for announcing the project.
 
+## Primary X Post
+
+```text
 I asked Grok Build to forge a full agentic AI studio.
 
 Not a landing page.
@@ -15,29 +18,37 @@ An actual Next.js app:
 - repo export
 
 Open source:
-[GitHub link]
+https://github.com/spacegiyou/aether-forge
 
 Demo:
 https://aether-forge-beta.vercel.app
+```
 
 ## Follow-Up
 
-The important part:
-
+```text
 No key = deterministic mock mode.
 XAI_API_KEY = live route.
 
-That means anyone can clone and run it without burning credits, then wire it into real Grok output when ready.
+Anyone can clone/run it without burning credits, then wire it into real Grok
+output when ready.
+```
 
 ## Repo Metadata
 
 Description:
 
-Grok-built Next.js agentic AI studio with swarm canvas, mock/live execution, image hooks, and repo export.
+```text
+Grok-built Next.js agentic AI studio with swarm canvas, mock/live execution,
+image hooks, and repo export.
+```
 
 Topics:
 
-grok, xai, nextjs, agentic-ai, react-flow, ai-agents, typescript, generative-ai, ai-template
+```text
+grok, xai, nextjs, agentic-ai, react-flow, ai-agents, typescript,
+generative-ai, ai-template
+```
 
 ## Assets
 

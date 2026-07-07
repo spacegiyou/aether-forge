@@ -12,6 +12,8 @@
 
 [Watch the 22-second English launch video](public/launch-video.mp4)
 
+Launch copy and asset notes live in [docs/launch.md](docs/launch.md).
+
 ## ✨ What is AetherForge?
 
 AetherForge is an interactive demonstration of agentic AI tooling. Drag four specialized agents onto a collaboration canvas, set a goal, and watch the swarm execute - generating code, visuals, X threads, and analytics in mock-safe mode or through optional live xAI credentials.
@@ -37,14 +39,14 @@ Built as a **Grok Build** showcase for GitHub, Vercel, and X.
 
 ### Run the live demo
 
-**Option A — Local OAuth (no API key, unofficial/local-only)**
+**Option A — Local OAuth (no API key, experimental/local-only)**
 
 ```bash
 npm run auth:xai          # browser PKCE sign-in (SuperGrok / X Premium+)
 AI_MODE=auto npm run dev  # prefers OAuth token, badge shows "OAuth"
 ```
 
-OAuth reuses xAI's browser login (reverse-engineered). It may return HTTP 403 on some tiers — set `XAI_API_KEY` to fall back to the API path. Tokens are stored in `~/.aetherforge/xai-auth.json` (git-ignored).
+OAuth reuses xAI's browser login through an unofficial local flow. It may return HTTP 403 on some tiers — set `XAI_API_KEY` to fall back to the API path. Tokens are stored in `~/.aetherforge/xai-auth.json` (git-ignored).
 
 **Option B — API key (git / Vercel / deploy)**
 
@@ -92,7 +94,9 @@ npx vercel --prod
 ## 🧪 Tests
 
 ```bash
-npm test
+npm run lint
+npm run build
+npm run test:all
 ```
 
 ## 📸 Demo GIF

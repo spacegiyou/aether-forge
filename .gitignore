@@ -42,6 +42,9 @@ yarn-error.log*
 
 # local launch/review notes
 /public/AetherForge_Virality_and_Productization_Directive.md
+GROK_*_DIRECTIVE.md
+GROK_GOAL_PROMPT.md
+grok_report*.pdf
 
 # vercel
 .vercel

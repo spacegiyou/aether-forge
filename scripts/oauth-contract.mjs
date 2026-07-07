@@ -1,6 +1,6 @@
 /**
  * Single OAuth contract — NousResearch/hermes-agent hermes_cli/auth.py + live probes.
- * BROWSER_UI_HOST (accounts.x.ai) = directive login UI; OIDC_ISSUER (auth.x.ai) = token/authorize.
+ * BROWSER_UI_HOST (accounts.x.ai) = browser login UI; OIDC_ISSUER (auth.x.ai) = token/authorize.
  */
 
 import contract from "./oauth-contract.json" with { type: "json" };
@@ -13,7 +13,7 @@ export const TOKEN_URL = `${OIDC_ISSUER}/oauth2/token`;
 export const ACCOUNTS_DISCOVERY_URL = `https://${BROWSER_UI_HOST}/.well-known/openid-configuration`;
 export const ACCOUNTS_AUTHORIZE_URL = `https://${BROWSER_UI_HOST}/oauth2/authorize`;
 export const ACCOUNTS_TOKEN_URL = `https://${BROWSER_UI_HOST}/oauth2/token`;
-/** Directive browser entry — login UI at accounts.x.ai */
+/** Browser login entry at accounts.x.ai */
 export const BROWSER_AUTHORIZE_URL = ACCOUNTS_AUTHORIZE_URL;
 export const VERIFICATION_NOTE = contract.VERIFICATION_NOTE ?? "";
 
@@ -36,7 +36,7 @@ export const XAI_OAUTH_CLIENT_ID = CLIENT_ID;
 export const XAI_OAUTH_SCOPE = SCOPE;
 
 /**
- * Probe accounts.x.ai (directive UI host) + auth.x.ai OIDC (hermes issuer).
+ * Probe accounts.x.ai (browser UI host) + auth.x.ai OIDC (hermes issuer).
  * @param {typeof fetch} fetcher
  */
 export async function verifyOAuthContract(fetcher = fetch) {

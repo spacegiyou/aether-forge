@@ -1,7 +1,7 @@
 {
   "BROWSER_UI_HOST": "accounts.x.ai",
   "OIDC_ISSUER": "https://auth.x.ai",
-  "VERIFICATION_NOTE": "GROK_OAUTH_DIRECTIVE §3: browser opens accounts.x.ai/oauth2/authorize; §3 step 4 token exchange follows hermes-agent (NousResearch/hermes-agent hermes_cli/auth.py XAI_OAUTH_ISSUER=https://auth.x.ai). accounts OIDC discovery returns 404; auth.x.ai OIDC discovery returns authorize+token endpoints used for code/refresh exchange.",
+  "VERIFICATION_NOTE": "Browser login opens accounts.x.ai/oauth2/authorize; token exchange follows hermes-agent (NousResearch/hermes-agent hermes_cli/auth.py XAI_OAUTH_ISSUER=https://auth.x.ai). accounts OIDC discovery returns 404; auth.x.ai OIDC discovery returns authorize+token endpoints used for code/refresh exchange.",
   "HERMES_REFERENCE": "NousResearch/hermes-agent hermes_cli/auth.py XAI_OAUTH_ISSUER",
   "CLIENT_ID": "b1a00492-073a-47ea-816f-4c329264a828",
   "SCOPE": "openid profile email offline_access grok-cli:access api:access",

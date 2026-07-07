@@ -23,7 +23,6 @@ import {
 const ROOT = join(import.meta.dirname, "..");
 
 const ALLOWLIST = new Set([
-  "GROK_OAUTH_DIRECTIVE.md",
   "README.md",
   "scripts/oauth-contract.json",
   "scripts/oauth-contract.mjs",
@@ -93,7 +92,7 @@ describe("oauth-contract", () => {
     assert.deepEqual(
       offenders,
       [],
-      `OAuth hosts must only appear in oauth-contract + directive/README:\n${offenders.join("\n")}`
+      `OAuth hosts must only appear in oauth-contract + README:\n${offenders.join("\n")}`
     );
   });
 });
